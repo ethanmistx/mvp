@@ -17,8 +17,11 @@ export function notify(collection: CollectionName): void {
   listeners.get(collection)?.forEach((fn) => fn())
 }
 
+const ALL_COLLECTIONS: CollectionName[] = ['profile', 'feeds', 'sleeps', 'growths', 'diapers']
+
+/** 整体导入后全量刷新 */
 export function notifyAll(): void {
-  for (const name of listeners.keys()) notify(name)
+  for (const name of ALL_COLLECTIONS) notify(name)
 }
 
 /** 订阅一个集合,返回数据与增删改方法 */

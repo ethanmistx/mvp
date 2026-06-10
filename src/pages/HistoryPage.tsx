@@ -29,7 +29,8 @@ function entryLabel(e: Entry, now: Date): { icon: string; text: string } {
     }
     case 'diaper': {
       const d = e.record
-      return { icon: '💧', text: `尿布 · ${diaperKindLabels[d.kind]}${d.note ? ` · ${d.note}` : ''}` }
+      const icon = d.kind === 'wet' ? '💧' : d.kind === 'dirty' ? '💩' : '💧💩'
+      return { icon, text: `尿布 · ${diaperKindLabels[d.kind]}${d.note ? ` · ${d.note}` : ''}` }
     }
     case 'growth': {
       const g = e.record
