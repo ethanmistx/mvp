@@ -1,10 +1,14 @@
-import { useState } from 'react'
+import { Suspense, lazy, useState } from 'react'
 import { useProfile } from './hooks/useStore'
 import { Onboarding } from './pages/Onboarding'
 import { TodayPage } from './pages/TodayPage'
 import { HistoryPage } from './pages/HistoryPage'
-import { GrowthPage } from './pages/GrowthPage'
 import { SettingsPage } from './pages/SettingsPage'
+
+// recharts 体积大,生长页按需加载;SW 预缓存后离线同样可用
+const GrowthPage = lazy(() =>
+  import('./pages/GrowthPage').then((m) => ({ default: m.GrowthPage })),
+)
 import { TabBar, type Tab } from './components/TabBar'
 
 export default function App() {
@@ -22,7 +26,11 @@ export default function App() {
     <div className="max-w-md mx-auto min-h-screen">
       {tab === 'today' && <TodayPage profile={profile} />}
       {tab === 'history' && <HistoryPage />}
-      {tab === 'growth' && <GrowthPage profile={profile} />}
+      {tab === 'growth' && (
+        <Suspense fallback={<div className="p-6 text-night-dim">加载中…</div>}>
+          <GrowthPage profile={profile} />
+        </Suspense>
+      )}
       {tab === 'settings' && <SettingsPage profile={profile} />}
       <TabBar active={tab} onChange={setTab} />
     </div>
