@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  /* 深夜单手使用:禁用双击缩放、滚动回弹尽量原生 */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  @apply bg-night-bg text-night-text;
+  font-family:
+    system-ui,
+    -apple-system,
+    'PingFang SC',
+    'Noto Sans CJK SC',
+    sans-serif;
+  /* 适配刘海屏 */
+  padding-top: env(safe-area-inset-top);
+}
+
+@layer components {
+  /* 大点击区基础样式:≥44px 高 */
+  .btn-big {
+    @apply min-h-[44px] rounded-2xl font-medium active:scale-95 transition-transform select-none;
+  }
+  .card {
+    @apply bg-night-card rounded-2xl p-4;
+  }
+}
