@@ -6,6 +6,7 @@ import { notifyAll, useProfile } from '../hooks/useStore'
 import { localDateStr } from '../lib/dates'
 import { generateSummary } from '../lib/summary'
 import { ConfirmDialog, Field, Segmented, inputCls } from '../components/ui'
+import { AiInsightSection } from '../components/AiInsightSection'
 
 export function SettingsPage({ profile }: { profile: BabyProfile }) {
   const { saveProfile } = useProfile()
@@ -148,6 +149,8 @@ export function SettingsPage({ profile }: { profile: BabyProfile }) {
           </div>
         )}
       </section>
+
+      <AiInsightSection />
 
       <section className="card">
         <h2 className="font-semibold mb-1">数据备份</h2>

@@ -1,9 +1,10 @@
-# 宝宝成长记录(Phase 0)
+# 宝宝成长记录(Phase 0 + Phase 1 AI 解读)
 
 0–3 岁宝宝家庭的移动端记录工具:喂养、睡眠、尿布、生长曲线。
 本地优先 PWA——所有数据只存在设备的 IndexedDB 里,无账号、无后端、无埋点、无第三方 SDK。
 
-Phase 0 只验证一件事:父母是否愿意持续记录数据。
+Phase 0 验证父母是否愿意持续记录数据;Phase 1 增加可选的 LLM 解读层
+(BYOK:用户自带 API Key,支持 DeepSeek / Kimi / AnyRouter / 自定义兼容接口)。
 
 ## 技术栈
 
@@ -54,21 +55,43 @@ LMS 表重新生成。
 红线:应用不做任何医疗宣称;生长曲线页固定显示
 「参考线为 WHO 标准,仅供日常参考,临床判断以儿保医生为准」。
 
-## Phase 1(LLM 解读层)接缝点
+## Phase 1:AI 解读(BYOK)
 
-架构上已为接入 LLM 预留三个接缝:
+设置页 →「AI 解读」:选择服务商、填入自己的 API Key 即可对最近 24h/7d
+的记录生成一段克制的中文解读。
 
-1. **`src/lib/summary.ts` 的 `generateSummary(SummaryInput): string`**
-   ——现在输出给人读的文本,Phase 1 在旁边加一个
-   `generateStructuredSummary(): object` 返回 JSON(同一 `SummaryInput`),
-   作为 LLM 的 prompt 上下文;UI 上「生成摘要」按钮旁加「AI 解读」即可,
-   数据采集路径零改动。
+| 服务商 | 接口格式 | 默认地址 | 默认模型 |
+| --- | --- | --- | --- |
+| DeepSeek | OpenAI 兼容 `/chat/completions` | `https://api.deepseek.com` | `deepseek-chat` |
+| Kimi(Moonshot) | OpenAI 兼容 | `https://api.moonshot.cn/v1` | `moonshot-v1-8k` |
+| AnyRouter | Anthropic 兼容 `/v1/messages` | `https://anyrouter.top` | `claude-sonnet-4-20250514` |
+| 自定义 | 两种格式可选 | 自填 | 自填 |
 
-2. **`src/storage/index.ts` 的单例装配点**——`storage` 是全应用唯一的
-   `StorageAdapter` 实例。接入后端同步/远程 LLM 服务时,在这里把
-   `DexieAdapter` 换成「本地写 + 后台同步」的组合实现
-   (接口 `get/put/delete/list/exportAll/importAll` 不变),UI 与 hooks 全部无感。
+地址与模型名均可改;任何 OpenAI 或 Anthropic 兼容网关(OneAPI、OpenRouter 等)
+都能以「自定义」接入。
 
-3. **`ExportBundle.schemaVersion`(`src/types.ts`)**——所有导出/导入/未来上行
-   同步都带版本号。Phase 1 若扩展字段(如 LLM 解读缓存、记录的服务端 id),
-   升 `schemaVersion: 2` 并在 `importAll` 入口做 v1→v2 迁移,老用户备份不丢。
+设计与隐私约定:
+
+- **BYOK,无中间服务器**:浏览器直接调用所选服务商,本应用不经手、不收集任何数据
+- **API Key 只存本机 localStorage**,刻意不进入 `ExportBundle`,导出备份不会泄露 Key
+- **发送的是统计摘要**(`generateStructuredSummary()` 的 JSON:次数/时长/奶量/生长区间),
+  不含备注原文;首次发送前有一次性确认弹窗
+- **红线不变**:system prompt 明确禁止诊断、恐慌措辞与用药建议,解读结尾固定
+  「不构成医疗建议」;解读结果只缓存在本机
+- **CORS 提示**:个别服务商的接口可能不允许浏览器直连(无 CORS 头),此时会提示
+  换用支持浏览器调用的网关;Anthropic 格式请求已带
+  `anthropic-dangerous-direct-browser-access: true` 头
+- 本开发环境无法访问外部 API(网络策略),请求构造与错误处理由 mock 单测覆盖,
+  真实联调请在部署后用自己的 Key 验证
+
+## Phase 1 接缝点(已兑现)
+
+1. **`src/lib/summary.ts` 的 `generateStructuredSummary(SummaryInput)`**
+   ——与给人读的 `generateSummary()` 共享同一套窗口聚合函数,
+   输出 JSON 作为 LLM 的 prompt 上下文(`src/lib/llm/prompt.ts` 消费)。
+
+2. **`src/storage/index.ts` 的单例装配点**——`storage` 仍是全应用唯一的
+   `StorageAdapter` 实例,后续接后端同步时在此替换实现,UI 与 hooks 无感。
+
+3. **`ExportBundle.schemaVersion`(`src/types.ts`)**——备份格式版本号保持 v1;
+   LLM 配置(含 Key)与解读缓存刻意放在 localStorage,不进备份。

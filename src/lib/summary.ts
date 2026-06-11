@@ -1,6 +1,8 @@
 // 结构化文本摘要:最近 24h / 7d 的喂养、睡眠、尿布、生长趋势。
-// 这是 Phase 1 LLM 解读层的数据接口雏形:输入为完整数据 + 当前时间,
-// 输出为稳定格式的纯文本,可直接复制给医生或粘贴进 LLM。
+// Phase 1:同一份聚合数据有两种输出——
+//   generateSummary()           给人读的纯文本(复制给医生/群友)
+//   generateStructuredSummary() 给 LLM 读的 JSON(AI 解读的输入)
+// 两者共享下方的窗口聚合函数,保证口径一致。
 
 import type { BabyProfile, Diaper, Feed, Growth, Sleep } from '../types'
 import { dayOfLife, formatMinutes, monthsAndDays, sleepMinutes } from './dates'
@@ -21,26 +23,37 @@ function inWindow(iso: string, now: Date, hours: number): boolean {
   return t > now.getTime() - hours * 3600_000 && t <= now.getTime()
 }
 
-function feedSection(feeds: Feed[], now: Date, hours: number): string[] {
-  const list = feeds.filter((f) => inWindow(f.ts, now, hours))
-  if (list.length === 0) return ['- 喂养:无记录']
-  const totalMl = list.reduce((s, f) => s + (f.amountMl ?? 0), 0)
-  const nurseCount = list.filter((f) => f.type === 'nurse').length
-  const nurseMin = list.reduce((s, f) => s + (f.minutes ?? 0), 0)
-  const solidCount = list.filter((f) => f.type === 'solid').length
-  const parts = [`共 ${list.length} 次`]
-  if (totalMl > 0) parts.push(`瓶喂/配方合计 ${totalMl} ml`)
-  if (nurseCount > 0) parts.push(`亲喂 ${nurseCount} 次共 ${nurseMin} 分钟`)
-  if (solidCount > 0) parts.push(`辅食 ${solidCount} 次`)
-  return [`- 喂养:${parts.join(',')}`]
+export interface FeedAgg {
+  count: number
+  totalMl: number
+  nurseCount: number
+  nurseMinutes: number
+  solidCount: number
 }
 
-function sleepSection(sleeps: Sleep[], now: Date, hours: number): string[] {
-  // 窗口内的睡眠按重叠部分计时:跨窗口边界的段只计窗口内时长
+export function aggregateFeeds(feeds: Feed[], now: Date, hours: number): FeedAgg {
+  const list = feeds.filter((f) => inWindow(f.ts, now, hours))
+  return {
+    count: list.length,
+    totalMl: list.reduce((s, f) => s + (f.amountMl ?? 0), 0),
+    nurseCount: list.filter((f) => f.type === 'nurse').length,
+    nurseMinutes: list.reduce((s, f) => s + (f.minutes ?? 0), 0),
+    solidCount: list.filter((f) => f.type === 'solid').length,
+  }
+}
+
+export interface SleepAgg {
+  segments: number
+  totalMinutes: number
+  longestMinutes: number
+}
+
+/** 窗口内睡眠按重叠部分计时:跨窗口边界的段只计窗口内时长 */
+export function aggregateSleeps(sleeps: Sleep[], now: Date, hours: number): SleepAgg {
   const windowStart = now.getTime() - hours * 3600_000
-  let total = 0
+  let totalMinutes = 0
   let segments = 0
-  let longest = 0
+  let longestMinutes = 0
   for (const s of sleeps) {
     const start = new Date(s.start).getTime()
     const end = s.end ? new Date(s.end).getTime() : now.getTime()
@@ -48,43 +61,101 @@ function sleepSection(sleeps: Sleep[], now: Date, hours: number): string[] {
     if (overlap <= 0) continue
     segments += 1
     const min = Math.round(overlap / 60000)
-    total += min
-    if (min > longest) longest = min
+    totalMinutes += min
+    if (min > longestMinutes) longestMinutes = min
   }
-  if (segments === 0) return ['- 睡眠:无记录']
-  return [`- 睡眠:共 ${segments} 段,合计 ${formatMinutes(total)},最长一段 ${formatMinutes(longest)}`]
+  return { segments, totalMinutes, longestMinutes }
+}
+
+export interface DiaperAgg {
+  total: number
+  wet: number
+  dirty: number
+  mixed: number
+}
+
+export function aggregateDiapers(diapers: Diaper[], now: Date, hours: number): DiaperAgg {
+  const list = diapers.filter((d) => inWindow(d.ts, now, hours))
+  return {
+    total: list.length,
+    wet: list.filter((d) => d.kind === 'wet').length,
+    dirty: list.filter((d) => d.kind === 'dirty').length,
+    mixed: list.filter((d) => d.kind === 'mixed').length,
+  }
+}
+
+export interface GrowthAgg {
+  /** 最近一次测量(任意指标) */
+  latest: Growth | null
+  /** 最近一次各指标的区间文字说明 */
+  descriptions: string[]
+  /** 与上一次体重记录的差值(kg),无可比记录则 null */
+  weightDeltaKg: number | null
+  prevWeightDate: string | null
+}
+
+export function aggregateGrowth(profile: BabyProfile, growths: Growth[]): GrowthAgg {
+  const sorted = [...growths].sort((a, b) => a.date.localeCompare(b.date))
+  const latest = sorted[sorted.length - 1] ?? null
+  if (!latest) return { latest: null, descriptions: [], weightDeltaKg: null, prevWeightDate: null }
+
+  const age = ageInMonths(profile.birthDate, latest.date)
+  const descriptions: string[] = []
+  if (latest.weightKg != null)
+    descriptions.push(describeMeasurement(profile.sex, 'weightKg', latest.weightKg, age))
+  if (latest.lengthCm != null)
+    descriptions.push(describeMeasurement(profile.sex, 'lengthCm', latest.lengthCm, age))
+  if (latest.headCm != null)
+    descriptions.push(describeMeasurement(profile.sex, 'headCm', latest.headCm, age))
+
+  let weightDeltaKg: number | null = null
+  let prevWeightDate: string | null = null
+  if (latest.weightKg != null) {
+    const prev = sorted.slice(0, -1).reverse().find((g) => g.weightKg != null)
+    if (prev) {
+      weightDeltaKg = Math.round((latest.weightKg - prev.weightKg!) * 100) / 100
+      prevWeightDate = prev.date
+    }
+  }
+  return { latest, descriptions, weightDeltaKg, prevWeightDate }
+}
+
+// ---------- 文本输出 ----------
+
+function feedSection(feeds: Feed[], now: Date, hours: number): string[] {
+  const a = aggregateFeeds(feeds, now, hours)
+  if (a.count === 0) return ['- 喂养:无记录']
+  const parts = [`共 ${a.count} 次`]
+  if (a.totalMl > 0) parts.push(`瓶喂/配方合计 ${a.totalMl} ml`)
+  if (a.nurseCount > 0) parts.push(`亲喂 ${a.nurseCount} 次共 ${a.nurseMinutes} 分钟`)
+  if (a.solidCount > 0) parts.push(`辅食 ${a.solidCount} 次`)
+  return [`- 喂养:${parts.join(',')}`]
+}
+
+function sleepSection(sleeps: Sleep[], now: Date, hours: number): string[] {
+  const a = aggregateSleeps(sleeps, now, hours)
+  if (a.segments === 0) return ['- 睡眠:无记录']
+  return [
+    `- 睡眠:共 ${a.segments} 段,合计 ${formatMinutes(a.totalMinutes)},最长一段 ${formatMinutes(a.longestMinutes)}`,
+  ]
 }
 
 function diaperSection(diapers: Diaper[], now: Date, hours: number): string[] {
-  const list = diapers.filter((d) => inWindow(d.ts, now, hours))
-  if (list.length === 0) return ['- 尿布:无记录']
-  const wet = list.filter((d) => d.kind === 'wet').length
-  const dirty = list.filter((d) => d.kind === 'dirty').length
-  const mixed = list.filter((d) => d.kind === 'mixed').length
-  return [`- 尿布:共 ${list.length} 次(尿湿 ${wet},便便 ${dirty},混合 ${mixed})`]
+  const a = aggregateDiapers(diapers, now, hours)
+  if (a.total === 0) return ['- 尿布:无记录']
+  return [`- 尿布:共 ${a.total} 次(尿湿 ${a.wet},便便 ${a.dirty},混合 ${a.mixed})`]
 }
 
-function growthSection(profile: BabyProfile, growths: Growth[], now: Date): string[] {
-  const sorted = [...growths].sort((a, b) => a.date.localeCompare(b.date))
-  if (sorted.length === 0) return ['- 生长:暂无测量记录']
-  const latest = sorted[sorted.length - 1]
-  const lines: string[] = [`- 生长(最近一次测量 ${latest.date}):`]
-  const age = ageInMonths(profile.birthDate, latest.date)
-  if (latest.weightKg != null)
-    lines.push(`  - ${describeMeasurement(profile.sex, 'weightKg', latest.weightKg, age)}`)
-  if (latest.lengthCm != null)
-    lines.push(`  - ${describeMeasurement(profile.sex, 'lengthCm', latest.lengthCm, age)}`)
-  if (latest.headCm != null)
-    lines.push(`  - ${describeMeasurement(profile.sex, 'headCm', latest.headCm, age)}`)
-  // 趋势:与上一次有同指标的记录对比
-  const prev = sorted.length >= 2 ? sorted[sorted.length - 2] : null
-  if (prev && latest.weightKg != null && prev.weightKg != null) {
-    const diff = Math.round((latest.weightKg - prev.weightKg) * 100) / 100
+function growthSection(profile: BabyProfile, growths: Growth[]): string[] {
+  const a = aggregateGrowth(profile, growths)
+  if (!a.latest) return ['- 生长:暂无测量记录']
+  const lines: string[] = [`- 生长(最近一次测量 ${a.latest.date}):`]
+  for (const d of a.descriptions) lines.push(`  - ${d}`)
+  if (a.weightDeltaKg != null && a.prevWeightDate) {
     lines.push(
-      `  - 较上次(${prev.date})体重${diff >= 0 ? '增加' : '减少'} ${Math.abs(diff)} kg`,
+      `  - 较上次(${a.prevWeightDate})体重${a.weightDeltaKg >= 0 ? '增加' : '减少'} ${Math.abs(a.weightDeltaKg)} kg`,
     )
   }
-  void now
   return lines
 }
 
@@ -108,11 +179,69 @@ export function generateSummary(input: SummaryInput): string {
     ...feedSection(feeds, now, 24 * 7),
     ...sleepSection(sleeps, now, 24 * 7),
     ...diaperSection(diapers, now, 24 * 7),
-    ...growthSection(profile, growths, now),
+    ...growthSection(profile, growths),
     '',
   ]
   const footer = ['说明:参考线为 WHO 标准,仅供日常参考,临床判断以儿保医生为准。']
   return [...header, ...h24, ...d7, ...footer].join('\n')
+}
+
+// ---------- 结构化输出(LLM 输入) ----------
+
+export interface StructuredSummary {
+  schemaVersion: 1
+  generatedAt: string
+  baby: {
+    name: string
+    sex: 'boy' | 'girl'
+    birthDate: string
+    dayOfLife: number
+    ageMonths: number
+    ageDaysInMonth: number
+  }
+  last24h: { feeds: FeedAgg; sleep: SleepAgg; diapers: DiaperAgg }
+  last7d: { feeds: FeedAgg; sleep: SleepAgg; diapers: DiaperAgg }
+  growth: {
+    latestDate: string | null
+    latest: { weightKg?: number; lengthCm?: number; headCm?: number } | null
+    whoBandDescriptions: string[]
+    weightDeltaKg: number | null
+    prevWeightDate: string | null
+  }
+}
+
+export function generateStructuredSummary(input: SummaryInput): StructuredSummary {
+  const { profile, feeds, sleeps, diapers, growths, now } = input
+  const { months, days } = monthsAndDays(profile.birthDate, now)
+  const g = aggregateGrowth(profile, growths)
+  const windowAgg = (hours: number) => ({
+    feeds: aggregateFeeds(feeds, now, hours),
+    sleep: aggregateSleeps(sleeps, now, hours),
+    diapers: aggregateDiapers(diapers, now, hours),
+  })
+  return {
+    schemaVersion: 1,
+    generatedAt: now.toISOString(),
+    baby: {
+      name: profile.name,
+      sex: profile.sex,
+      birthDate: profile.birthDate,
+      dayOfLife: dayOfLife(profile.birthDate, now),
+      ageMonths: months,
+      ageDaysInMonth: days,
+    },
+    last24h: windowAgg(24),
+    last7d: windowAgg(24 * 7),
+    growth: {
+      latestDate: g.latest?.date ?? null,
+      latest: g.latest
+        ? { weightKg: g.latest.weightKg, lengthCm: g.latest.lengthCm, headCm: g.latest.headCm }
+        : null,
+      whoBandDescriptions: g.descriptions,
+      weightDeltaKg: g.weightDeltaKg,
+      prevWeightDate: g.prevWeightDate,
+    },
+  }
 }
 
 // 重新导出方便 UI 层取用

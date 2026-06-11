@@ -118,7 +118,7 @@ export function formatMinutes(min: number): string {
 
 /** 距现在的相对时间文案,如「35 分钟前」「2 小时前」 */
 export function timeAgo(iso: string, now: Date): string {
-  const diffMin = Math.max(0, Math.round((now.getTime() - new Date(iso).getTime()) / 60000))
+  const diffMin = Math.max(0, Math.floor((now.getTime() - new Date(iso).getTime()) / 60000))
   if (diffMin < 1) return '刚刚'
   if (diffMin < 60) return `${diffMin} 分钟前`
   const h = Math.floor(diffMin / 60)

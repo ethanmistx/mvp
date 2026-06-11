@@ -57,4 +57,24 @@ describe('App 冒烟', () => {
     await screen.findByText(/今日 1 次 · 120 ml/)
     expect(screen.getByText(/上次喂养:刚刚/)).toBeTruthy()
   })
+
+  it('设置页:AI 解读配置区可用,服务商切换带入预设', async () => {
+    render(<App />)
+    await screen.findByText('小测')
+    fireEvent.click(screen.getByText('设置'))
+    await screen.findByText('AI 解读')
+
+    // 预设切换:Kimi → 接口地址自动填入 moonshot
+    fireEvent.click(screen.getByText('Kimi'))
+    const urlInput = screen.getByPlaceholderText('https://…') as HTMLInputElement
+    expect(urlInput.value).toBe('https://api.moonshot.cn/v1')
+
+    // AnyRouter → anthropic 网关地址
+    fireEvent.click(screen.getByText('AnyRouter'))
+    expect(urlInput.value).toBe('https://anyrouter.top')
+
+    // 未填 Key 时「生成解读」禁用
+    const genBtn = screen.getByText('生成解读') as HTMLButtonElement
+    expect(genBtn.closest('button')!.disabled).toBe(true)
+  })
 })

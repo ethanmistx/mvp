@@ -33,12 +33,13 @@ export function Sheet({
   )
 }
 
-/** 删除等危险操作的二次确认 */
+/** 删除等危险操作的二次确认;tone=primary 用于非危险的确认(如发送数据) */
 export function ConfirmDialog({
   open,
   title,
   message,
   confirmLabel = '删除',
+  tone = 'danger',
   onConfirm,
   onCancel,
 }: {
@@ -46,6 +47,7 @@ export function ConfirmDialog({
   title: string
   message?: string
   confirmLabel?: string
+  tone?: 'danger' | 'primary'
   onConfirm: () => void
   onCancel: () => void
 }) {
@@ -61,7 +63,9 @@ export function ConfirmDialog({
             取消
           </button>
           <button
-            className="btn-big flex-1 py-3 bg-red-900/80 text-red-200"
+            className={`btn-big flex-1 py-3 ${
+              tone === 'danger' ? 'bg-red-900/80 text-red-200' : 'bg-warm text-night-bg'
+            }`}
             onClick={onConfirm}
           >
             {confirmLabel}
