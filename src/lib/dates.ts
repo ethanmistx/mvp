@@ -140,7 +140,10 @@ export function toDatetimeLocal(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-/** datetime-local 值转回 ISO */
-export function fromDatetimeLocal(value: string): string {
-  return new Date(value).toISOString()
+/** datetime-local 值转回 ISO;空串/非法输入返回 null(调用方必须处理并给出提示) */
+export function fromDatetimeLocal(value: string): string | null {
+  if (value.trim() === '') return null
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toISOString()
 }

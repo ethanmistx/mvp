@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   ageInMonths,
   dayOfLife,
+  fromDatetimeLocal,
   monthsAndDays,
   sleepBelongsToDay,
   sleepMinutes,
   streakDays,
+  toDatetimeLocal,
 } from './dates'
 
 describe('dayOfLife', () => {
@@ -70,6 +72,18 @@ describe('sleepMinutes', () => {
   it('进行中的段按 now 截断', () => {
     const start = new Date(2026, 5, 10, 13, 0).toISOString()
     expect(sleepMinutes(start, null, new Date(2026, 5, 10, 13, 45))).toBe(45)
+  })
+})
+
+describe('fromDatetimeLocal(必须能安全处理被清空的输入)', () => {
+  it('空串与非法输入返回 null 而不是抛错', () => {
+    expect(fromDatetimeLocal('')).toBeNull()
+    expect(fromDatetimeLocal('   ')).toBeNull()
+    expect(fromDatetimeLocal('not-a-date')).toBeNull()
+  })
+  it('与 toDatetimeLocal 往返(分钟精度)', () => {
+    const iso = new Date(2026, 5, 10, 13, 45).toISOString()
+    expect(fromDatetimeLocal(toDatetimeLocal(iso))).toBe(iso)
   })
 })
 

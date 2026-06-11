@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { Sleep } from '../types'
+import { storage } from '../storage'
 import { useCollection, useNow } from '../hooks/useStore'
 import { sleepStatsForDay } from '../lib/stats'
 import { formatMinutes, formatTime, sleepMinutes } from '../lib/dates'
@@ -12,15 +13,26 @@ export function SleepSection() {
   const hasOngoing = (items ?? []).some((s) => s.end === null)
   const now = useNow(hasOngoing ? 1000 : 30_000)
   const [manualDraft, setManualDraft] = useState<Sleep | null>(null)
+  // 防双击:写入在途时丢弃后续点击,避免连点造出两条进行中记录
+  const togglingRef = useRef(false)
 
   const stats = useMemo(() => sleepStatsForDay(items ?? [], now), [items, now])
   const ongoing = stats.ongoing
 
-  const toggle = () => {
-    if (ongoing) {
-      void put({ ...ongoing, end: new Date().toISOString() })
-    } else {
-      void put({ id: newId(), start: new Date().toISOString(), end: null })
+  const toggle = async () => {
+    if (togglingRef.current) return
+    togglingRef.current = true
+    try {
+      // 点击时从存储读权威状态,而不是依赖可能滞后的 items
+      const latest = await storage.list<Sleep>('sleeps')
+      const current = latest.find((s) => s.end === null)
+      if (current) {
+        await put({ ...current, end: new Date().toISOString() })
+      } else {
+        await put({ id: newId(), start: new Date().toISOString(), end: null })
+      }
+    } finally {
+      togglingRef.current = false
     }
   }
 
@@ -41,7 +53,7 @@ export function SleepSection() {
             ? 'bg-indigo-900 text-indigo-100 ring-2 ring-indigo-400 animate-pulse'
             : 'bg-night-line'
         }`}
-        onClick={toggle}
+        onClick={() => void toggle()}
       >
         {ongoing ? (
           <span>
@@ -68,8 +80,9 @@ export function SleepSection() {
       </button>
       {manualDraft && (
         <SleepSheet
-          open={manualDraft !== null}
+          open
           initial={manualDraft}
+          allSleeps={items ?? []}
           onSave={(s) => void put(s)}
           onClose={() => setManualDraft(null)}
         />

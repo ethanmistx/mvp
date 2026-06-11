@@ -14,5 +14,18 @@ export const diaperKindLabels: Record<DiaperKind, string> = {
   mixed: '混合',
 }
 
+export const feedTypeIcons: Record<FeedType, string> = {
+  nurse: '🤱',
+  bottleBreast: '🍼',
+  formula: '🥛',
+  solid: '🥣',
+}
+
+export const diaperKindIcons: Record<DiaperKind, string> = {
+  wet: '💧',
+  dirty: '💩',
+  mixed: '💧💩',
+}
+
 /** 红线:生长曲线页固定免责声明 */
 export const GROWTH_DISCLAIMER = '参考线为 WHO 标准,仅供日常参考,临床判断以儿保医生为准'

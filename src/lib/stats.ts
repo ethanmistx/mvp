@@ -1,3 +1,6 @@
+// 「今日」统计:按本地日历日聚合,服务于首页各模块。
+// 注意与 src/lib/summary.ts 的区别:摘要按「滚动时间窗」(最近 24h/7d)聚合,
+// 两套口径是有意不同的(「今天睡了多久」vs「最近 24 小时睡了多久」),不要合并。
 import type { Diaper, Feed, Sleep } from '../types'
 import { isSameLocalDay, localDateStr, sleepBelongsToDay, sleepMinutes } from './dates'
 
@@ -61,6 +64,15 @@ export function diaperStatsForDay(diapers: Diaper[], now: Date): DiaperDayStats 
     dirty: today.filter((d) => d.kind === 'dirty').length,
     mixed: today.filter((d) => d.kind === 'mixed').length,
   }
+}
+
+/**
+ * 进行中睡眠唯一性:保存 candidate 后是否会出现第二条 end=null 的记录。
+ * 返回冲突的那条;无冲突返回 null。
+ */
+export function findConflictingOngoing(sleeps: Sleep[], candidate: Sleep): Sleep | null {
+  if (candidate.end !== null) return null
+  return sleeps.find((s) => s.end === null && s.id !== candidate.id) ?? null
 }
 
 /** 收集所有有记录的日子(用于连续打卡统计) */

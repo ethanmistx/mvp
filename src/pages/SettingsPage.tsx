@@ -1,9 +1,10 @@
 // 设置页:宝宝档案编辑、数据导出/导入(数据主权)、生成 LLM/医生摘要。
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { BabyProfile, ExportBundle, Sex } from '../types'
 import { storage } from '../storage'
 import { notifyAll, useProfile } from '../hooks/useStore'
 import { localDateStr } from '../lib/dates'
+import { parseBundle } from '../lib/backup'
 import { generateSummary } from '../lib/summary'
 import { ConfirmDialog, Field, Segmented, inputCls } from '../components/ui'
 import { AiInsightSection } from '../components/AiInsightSection'
@@ -15,6 +16,14 @@ export function SettingsPage({ profile }: { profile: BabyProfile }) {
   const [sex, setSex] = useState<Sex>(profile.sex)
   const [savedTip, setSavedTip] = useState(false)
 
+  // 档案在外部变化时(典型场景:导入了另一个宝宝的备份)重新同步表单,
+  // 否则陈旧的本地状态会把刚导入的档案覆盖回旧值。
+  useEffect(() => {
+    setName(profile.name)
+    setBirthDate(profile.birthDate)
+    setSex(profile.sex)
+  }, [profile.id, profile.name, profile.birthDate, profile.sex])
+
   const [summary, setSummary] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [pendingImport, setPendingImport] = useState<ExportBundle | null>(null)
@@ -22,8 +31,11 @@ export function SettingsPage({ profile }: { profile: BabyProfile }) {
   const fileRef = useRef<HTMLInputElement>(null)
 
   const profileChanged = name !== profile.name || birthDate !== profile.birthDate || sex !== profile.sex
+  // HTML 的 max 属性可被手输/改时钟绕过,保存前再校验一次
+  const birthDateValid = birthDate !== '' && birthDate <= localDateStr(new Date())
 
   const saveBaby = () => {
+    if (!birthDateValid) return
     void saveProfile({ ...profile, name: name.trim(), birthDate, sex })
     setSavedTip(true)
     setTimeout(() => setSavedTip(false), 1500)
@@ -41,26 +53,28 @@ export function SettingsPage({ profile }: { profile: BabyProfile }) {
   }
 
   const onFilePicked = async (file: File) => {
-    try {
-      const parsed = JSON.parse(await file.text()) as ExportBundle
-      if (parsed.schemaVersion !== 1 || !Array.isArray(parsed.feeds)) {
-        setImportResult('文件格式不正确,请选择本应用导出的 JSON 备份。')
-        return
-      }
-      setPendingImport(parsed) // 导入会覆盖现有数据,需二次确认
-    } catch {
-      setImportResult('无法解析该文件,请确认是本应用导出的 JSON 备份。')
+    const result = parseBundle(await file.text())
+    if (!result.ok) {
+      setImportResult(result.reason)
+      return
     }
+    setPendingImport(result.bundle) // 导入会覆盖现有数据,需二次确认
   }
 
   const doImport = async () => {
     if (!pendingImport) return
-    await storage.importAll(pendingImport)
-    notifyAll()
+    const bundle = pendingImport
     setPendingImport(null)
-    setImportResult(
-      `导入完成:喂养 ${pendingImport.feeds.length} 条,睡眠 ${pendingImport.sleeps.length} 条,尿布 ${pendingImport.diapers.length} 条,生长 ${pendingImport.growths.length} 条。`,
-    )
+    try {
+      await storage.importAll(bundle)
+      notifyAll()
+      setImportResult(
+        `导入完成:喂养 ${bundle.feeds.length} 条,睡眠 ${bundle.sleeps.length} 条,尿布 ${bundle.diapers.length} 条,生长 ${bundle.growths.length} 条。`,
+      )
+    } catch {
+      // Dexie 事务已回滚,原有数据未受影响
+      setImportResult('导入失败:写入数据库时出错,原有数据未受影响。')
+    }
   }
 
   const makeSummary = async () => {
@@ -118,9 +132,12 @@ export function SettingsPage({ profile }: { profile: BabyProfile }) {
             onChange={setSex}
           />
         </Field>
+        {!birthDateValid && (
+          <p className="text-sm text-red-300 mb-3">出生日期不能晚于今天。</p>
+        )}
         <button
           className="btn-big w-full py-3 bg-warm text-night-bg disabled:opacity-40"
-          disabled={!profileChanged || name.trim() === ''}
+          disabled={!profileChanged || name.trim() === '' || !birthDateValid}
           onClick={saveBaby}
         >
           {savedTip ? '已保存 ✓' : '保存档案'}

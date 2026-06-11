@@ -10,6 +10,7 @@ import { getPreset, isConfigComplete, providerPresets, type ProviderId } from '.
 import {
   loadLastInsight,
   loadLlmConfig,
+  loadProviderConfig,
   saveLastInsight,
   saveLlmConfig,
   type CachedInsight,
@@ -30,15 +31,10 @@ export function AiInsightSection() {
   const preset = getPreset(cfg.providerId)
 
   const pickProvider = (id: ProviderId) => {
-    const p = getPreset(id)
-    // 切换服务商时带入预设的地址/模型/格式,保留已填的 Key
-    setCfg((c) => ({
-      providerId: id,
-      baseUrl: id === 'custom' ? c.baseUrl : p.baseUrl,
-      model: id === 'custom' ? c.model : p.defaultModel,
-      apiFormat: p.apiFormat,
-      apiKey: c.apiKey,
-    }))
+    // 先把当前编辑中的配置存到它自己的服务商名下,再载入目标服务商的配置,
+    // 各家配置(地址/模型/Key/格式)互不覆盖
+    saveLlmConfig(cfg)
+    setCfg(loadProviderConfig(id))
   }
 
   const saveConfig = () => {

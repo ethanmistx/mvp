@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import type { Diaper, Feed, Growth, Sleep } from '../types'
 import { useCollection, useNow } from '../hooks/useStore'
 import { formatMinutes, formatTime, localDateStr, sleepMinutes } from '../lib/dates'
-import { diaperKindLabels, feedTypeLabels } from '../lib/labels'
+import { diaperKindIcons, diaperKindLabels, feedTypeLabels } from '../lib/labels'
 import { ConfirmDialog } from '../components/ui'
 import { DiaperSheet, FeedSheet, GrowthSheet, SleepSheet } from '../components/editSheets'
 
@@ -29,8 +29,10 @@ function entryLabel(e: Entry, now: Date): { icon: string; text: string } {
     }
     case 'diaper': {
       const d = e.record
-      const icon = d.kind === 'wet' ? '💧' : d.kind === 'dirty' ? '💩' : '💧💩'
-      return { icon, text: `尿布 · ${diaperKindLabels[d.kind]}${d.note ? ` · ${d.note}` : ''}` }
+      return {
+        icon: diaperKindIcons[d.kind],
+        text: `尿布 · ${diaperKindLabels[d.kind]}${d.note ? ` · ${d.note}` : ''}`,
+      }
     }
     case 'growth': {
       const g = e.record
@@ -52,6 +54,8 @@ export function HistoryPage() {
 
   const [editing, setEditing] = useState<Entry | null>(null)
   const [deleting, setDeleting] = useState<Entry | null>(null)
+  // 按天分页:一年后全量渲染几千条会卡顿,默认只渲染最近 14 个记录日
+  const [daysShown, setDaysShown] = useState(14)
 
   const groups = useMemo(() => {
     const entries: Entry[] = [
@@ -89,7 +93,7 @@ export function HistoryPage() {
       {groups.length === 0 && (
         <p className="text-night-dim text-sm px-1">还没有任何记录,去「今日」页开始吧。</p>
       )}
-      {groups.map(([day, entries]) => (
+      {groups.slice(0, daysShown).map(([day, entries]) => (
         <div key={day} className="mb-4">
           <h2 className="text-sm text-night-dim px-1 mb-2">
             {day === todayStr ? `今天 · ${day}` : day}
@@ -123,11 +127,26 @@ export function HistoryPage() {
         </div>
       ))}
 
+      {groups.length > daysShown && (
+        <button
+          className="btn-big w-full py-3 bg-night-card text-night-dim text-sm"
+          onClick={() => setDaysShown((n) => n + 30)}
+        >
+          加载更早的记录(还有 {groups.length - daysShown} 天)
+        </button>
+      )}
+
       {editing?.kind === 'feed' && (
         <FeedSheet open initial={editing.record} onSave={(r) => void feeds.put(r)} onClose={() => setEditing(null)} />
       )}
       {editing?.kind === 'sleep' && (
-        <SleepSheet open initial={editing.record} onSave={(r) => void sleeps.put(r)} onClose={() => setEditing(null)} />
+        <SleepSheet
+          open
+          initial={editing.record}
+          allSleeps={sleeps.items ?? []}
+          onSave={(r) => void sleeps.put(r)}
+          onClose={() => setEditing(null)}
+        />
       )}
       {editing?.kind === 'diaper' && (
         <DiaperSheet open initial={editing.record} onSave={(r) => void diapers.put(r)} onClose={() => setEditing(null)} />

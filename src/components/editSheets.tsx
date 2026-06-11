@@ -1,11 +1,20 @@
 // 四类记录的新建/编辑底部弹层。新建与编辑共用,保证字段一致。
-import { useEffect, useState } from 'react'
+// 约定:调用方只在打开时才挂载这些组件(条件渲染),状态由 initial 在挂载时初始化,
+// 关闭即卸载,无需手动重置。
+// 校验失败一律给出可见的错误文案,绝不静默 return。
+import { useState } from 'react'
 import type { Diaper, DiaperKind, Feed, FeedType, Growth, Sleep } from '../types'
 import { fromDatetimeLocal, toDatetimeLocal } from '../lib/dates'
+import { findConflictingOngoing } from '../lib/stats'
 import { diaperKindLabels, feedTypeLabels } from '../lib/labels'
 import { Field, Segmented, Sheet, Stepper, inputCls } from './ui'
 
 const AMOUNT_PRESETS = [60, 90, 120, 150]
+
+function ErrorText({ message }: { message: string | null }) {
+  if (!message) return null
+  return <p className="text-sm text-red-300 mb-3">{message}</p>
+}
 
 export function FeedSheet({
   open,
@@ -24,25 +33,20 @@ export function FeedSheet({
   const [minutes, setMinutes] = useState(initial.minutes ?? 15)
   const [ts, setTs] = useState(toDatetimeLocal(initial.ts))
   const [note, setNote] = useState(initial.note ?? '')
-
-  // 弹层重新打开时同步初始值
-  useEffect(() => {
-    if (open) {
-      setType(initial.type)
-      setAmountMl(initial.amountMl ?? 120)
-      setMinutes(initial.minutes ?? 15)
-      setTs(toDatetimeLocal(initial.ts))
-      setNote(initial.note ?? '')
-    }
-  }, [open, initial])
+  const [error, setError] = useState<string | null>(null)
 
   const needsAmount = type === 'bottleBreast' || type === 'formula'
   const needsMinutes = type === 'nurse'
 
   const save = () => {
+    const tsIso = fromDatetimeLocal(ts)
+    if (tsIso === null) {
+      setError('请填写有效的时间。')
+      return
+    }
     onSave({
       id: initial.id,
-      ts: fromDatetimeLocal(ts),
+      ts: tsIso,
       type,
       amountMl: needsAmount ? amountMl : undefined,
       minutes: needsMinutes ? minutes : undefined,
@@ -79,6 +83,7 @@ export function FeedSheet({
       <Field label="备注(可选)">
         <input type="text" className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="如:吐奶一点" />
       </Field>
+      <ErrorText message={error} />
       <button className="btn-big w-full py-4 bg-warm text-night-bg text-lg" onClick={save}>
         保存
       </button>
@@ -89,31 +94,49 @@ export function FeedSheet({
 export function SleepSheet({
   open,
   initial,
+  allSleeps,
   onSave,
   onClose,
 }: {
   open: boolean
   initial: Sleep
+  /** 全部睡眠记录,用于「进行中」唯一性校验 */
+  allSleeps: Sleep[]
   onSave: (sleep: Sleep) => void
   onClose: () => void
 }) {
   const [start, setStart] = useState(toDatetimeLocal(initial.start))
-  const [end, setEnd] = useState(initial.end ? toDatetimeLocal(initial.end) : '')
+  const [end, setEnd] = useState(
+    toDatetimeLocal(initial.end ?? new Date().toISOString()),
+  )
   const [ongoing, setOngoing] = useState(initial.end === null)
-
-  useEffect(() => {
-    if (open) {
-      setStart(toDatetimeLocal(initial.start))
-      setEnd(initial.end ? toDatetimeLocal(initial.end) : toDatetimeLocal(new Date().toISOString()))
-      setOngoing(initial.end === null)
-    }
-  }, [open, initial])
+  const [error, setError] = useState<string | null>(null)
 
   const save = () => {
     const startIso = fromDatetimeLocal(start)
-    const endIso = ongoing ? null : fromDatetimeLocal(end)
-    if (endIso !== null && endIso <= startIso) return // 结束须晚于开始
-    onSave({ id: initial.id, start: startIso, end: endIso })
+    if (startIso === null) {
+      setError('请填写有效的入睡时间。')
+      return
+    }
+    let endIso: string | null = null
+    if (!ongoing) {
+      endIso = fromDatetimeLocal(end)
+      if (endIso === null) {
+        setError('请填写有效的醒来时间。')
+        return
+      }
+      if (endIso <= startIso) {
+        setError('醒来时间需要晚于入睡时间。')
+        return
+      }
+    }
+    const candidate: Sleep = { id: initial.id, start: startIso, end: endIso }
+    const conflict = findConflictingOngoing(allSleeps, candidate)
+    if (conflict) {
+      setError('已有一段进行中的睡眠,请先结束它,再把这条标记为「还在睡」。')
+      return
+    }
+    onSave(candidate)
     onClose()
   }
 
@@ -137,6 +160,7 @@ export function SleepSheet({
           <input type="datetime-local" className={inputCls} value={end} onChange={(e) => setEnd(e.target.value)} />
         </Field>
       )}
+      <ErrorText message={error} />
       <button className="btn-big w-full py-4 bg-warm text-night-bg text-lg" onClick={save}>
         保存
       </button>
@@ -158,17 +182,15 @@ export function DiaperSheet({
   const [kind, setKind] = useState<DiaperKind>(initial.kind)
   const [ts, setTs] = useState(toDatetimeLocal(initial.ts))
   const [note, setNote] = useState(initial.note ?? '')
-
-  useEffect(() => {
-    if (open) {
-      setKind(initial.kind)
-      setTs(toDatetimeLocal(initial.ts))
-      setNote(initial.note ?? '')
-    }
-  }, [open, initial])
+  const [error, setError] = useState<string | null>(null)
 
   const save = () => {
-    onSave({ id: initial.id, ts: fromDatetimeLocal(ts), kind, note: note.trim() || undefined })
+    const tsIso = fromDatetimeLocal(ts)
+    if (tsIso === null) {
+      setError('请填写有效的时间。')
+      return
+    }
+    onSave({ id: initial.id, ts: tsIso, kind, note: note.trim() || undefined })
     onClose()
   }
 
@@ -190,6 +212,7 @@ export function DiaperSheet({
       <Field label="备注(可选)">
         <input type="text" className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} />
       </Field>
+      <ErrorText message={error} />
       <button className="btn-big w-full py-4 bg-warm text-night-bg text-lg" onClick={save}>
         保存
       </button>
@@ -212,15 +235,7 @@ export function GrowthSheet({
   const [weightKg, setWeightKg] = useState(initial.weightKg?.toString() ?? '')
   const [lengthCm, setLengthCm] = useState(initial.lengthCm?.toString() ?? '')
   const [headCm, setHeadCm] = useState(initial.headCm?.toString() ?? '')
-
-  useEffect(() => {
-    if (open) {
-      setDate(initial.date)
-      setWeightKg(initial.weightKg?.toString() ?? '')
-      setLengthCm(initial.lengthCm?.toString() ?? '')
-      setHeadCm(initial.headCm?.toString() ?? '')
-    }
-  }, [open, initial])
+  const [error, setError] = useState<string | null>(null)
 
   const parse = (s: string): number | undefined => {
     const n = Number(s)
@@ -228,6 +243,10 @@ export function GrowthSheet({
   }
 
   const save = () => {
+    if (date.trim() === '') {
+      setError('请选择测量日期。')
+      return
+    }
     const g: Growth = {
       id: initial.id,
       date,
@@ -235,7 +254,10 @@ export function GrowthSheet({
       lengthCm: parse(lengthCm),
       headCm: parse(headCm),
     }
-    if (g.weightKg == null && g.lengthCm == null && g.headCm == null) return // 至少填一项
+    if (g.weightKg == null && g.lengthCm == null && g.headCm == null) {
+      setError('体重 / 身长 / 头围至少填一项(需为正数)。')
+      return
+    }
     onSave(g)
     onClose()
   }
@@ -254,6 +276,7 @@ export function GrowthSheet({
       <Field label="头围 cm">
         <input type="number" inputMode="decimal" step="0.1" className={inputCls} value={headCm} onChange={(e) => setHeadCm(e.target.value)} placeholder="如 43.0" />
       </Field>
+      <ErrorText message={error} />
       <button className="btn-big w-full py-4 bg-warm text-night-bg text-lg" onClick={save}>
         保存
       </button>

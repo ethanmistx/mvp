@@ -10,7 +10,9 @@ export function Onboarding({ onSave }: { onSave: (p: BabyProfile) => void }) {
   const [birthDate, setBirthDate] = useState(localDateStr(new Date()))
   const [sex, setSex] = useState<Sex>('boy')
 
-  const valid = name.trim().length > 0 && birthDate !== ''
+  // HTML 的 max 属性可被手输绕过,这里再校验一次:出生日期不能在未来
+  const valid =
+    name.trim().length > 0 && birthDate !== '' && birthDate <= localDateStr(new Date())
 
   return (
     <div className="min-h-screen flex flex-col justify-center p-6 max-w-md mx-auto">

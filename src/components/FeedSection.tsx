@@ -3,16 +3,9 @@ import type { Feed, FeedType } from '../types'
 import { useCollection, useNow } from '../hooks/useStore'
 import { feedStatsForDay } from '../lib/stats'
 import { timeAgo } from '../lib/dates'
-import { feedTypeLabels } from '../lib/labels'
+import { feedTypeIcons, feedTypeLabels } from '../lib/labels'
 import { newId } from '../lib/id'
 import { FeedSheet } from './editSheets'
-
-const typeIcons: Record<FeedType, string> = {
-  nurse: '🤱',
-  bottleBreast: '🍼',
-  formula: '🥛',
-  solid: '🥣',
-}
 
 export function FeedSection() {
   const { items, put } = useCollection<Feed>('feeds')
@@ -52,7 +45,7 @@ export function FeedSection() {
             className="btn-big py-3 bg-night-line flex flex-col items-center gap-1"
             onClick={() => openNew(t)}
           >
-            <span className="text-2xl">{typeIcons[t]}</span>
+            <span className="text-2xl">{feedTypeIcons[t]}</span>
             <span className="text-xs">{feedTypeLabels[t]}</span>
           </button>
         ))}

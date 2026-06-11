@@ -2,14 +2,8 @@ import { useMemo, useState } from 'react'
 import type { Diaper, DiaperKind } from '../types'
 import { useCollection, useNow } from '../hooks/useStore'
 import { diaperStatsForDay } from '../lib/stats'
-import { diaperKindLabels } from '../lib/labels'
+import { diaperKindIcons, diaperKindLabels } from '../lib/labels'
 import { newId } from '../lib/id'
-
-const kindIcons: Record<DiaperKind, string> = {
-  wet: '💧',
-  dirty: '💩',
-  mixed: '💧💩',
-}
 
 export function DiaperSection() {
   const { items, put } = useCollection<Diaper>('diapers')
@@ -42,7 +36,7 @@ export function DiaperSection() {
             }`}
             onClick={() => record(k)}
           >
-            <span className="text-2xl">{kindIcons[k]}</span>
+            <span className="text-2xl">{diaperKindIcons[k]}</span>
             <span className="text-xs">{justSaved === k ? '已记录 ✓' : diaperKindLabels[k]}</span>
           </button>
         ))}

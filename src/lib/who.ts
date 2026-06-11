@@ -1,7 +1,7 @@
 // WHO 参考线插值与区间判断(纯函数,可单测)。
 // 红线提醒:本模块只输出「所处区间」的描述性文字,不做任何医疗判断。
 
-import { WHO_MAX_MONTH, whoStandards, type Metric, type PercentileRow } from '../data/whoStandards'
+import { WHO_MAX_MONTH, whoStandards, type Metric } from '../data/whoStandards'
 import type { Sex } from '../types'
 
 export type { Metric }
@@ -105,5 +105,3 @@ export function whoCurve(sex: Sex, metric: Metric): Array<{ month: number } & Pe
   }
   return points
 }
-
-export type { PercentileRow }

@@ -5,11 +5,32 @@ import 'fake-indexeddb/auto'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import App from './App'
+import { storage } from './storage'
+import { localDateStr } from './lib/dates'
+import type { BabyProfile } from './types'
 
 afterEach(cleanup)
 
+// 用例之间不共享状态:需要档案的用例自己种入,而不是依赖前一个用例的引导流程
+async function seedProfile(): Promise<void> {
+  const profiles = await storage.list<BabyProfile>('profile')
+  for (const p of profiles) await storage.delete('profile', p.id)
+  await storage.put('profile', {
+    id: 'test-profile',
+    name: '小测',
+    birthDate: localDateStr(new Date()),
+    sex: 'boy',
+  })
+}
+
+async function clearProfile(): Promise<void> {
+  const profiles = await storage.list<BabyProfile>('profile')
+  for (const p of profiles) await storage.delete('profile', p.id)
+}
+
 describe('App 冒烟', () => {
   it('完成引导后可一键记录尿布与睡眠,统计实时更新', async () => {
+    await clearProfile()
     render(<App />)
 
     // 首次启动:引导页
@@ -48,8 +69,9 @@ describe('App 冒烟', () => {
   })
 
   it('喂养弹层:点类型 → 保存,默认 120ml 与当前时间', async () => {
+    await seedProfile()
     render(<App />)
-    await screen.findByText('小测') // 档案已存在,直接进首页
+    await screen.findByText('小测')
     fireEvent.click(screen.getByText('配方奶'))
     await screen.findByText('喂养记录')
     fireEvent.click(screen.getByText('保存'))
@@ -59,6 +81,7 @@ describe('App 冒烟', () => {
   })
 
   it('设置页:AI 解读配置区可用,服务商切换带入预设', async () => {
+    await seedProfile()
     render(<App />)
     await screen.findByText('小测')
     fireEvent.click(screen.getByText('设置'))

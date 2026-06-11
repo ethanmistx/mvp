@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Diaper, Feed, Sleep } from '../types'
-import { diaperStatsForDay, feedStatsForDay, sleepStatsForDay } from './stats'
+import { diaperStatsForDay, feedStatsForDay, findConflictingOngoing, sleepStatsForDay } from './stats'
 
 const now = new Date(2026, 5, 10, 14, 0) // 2026-06-10 14:00 本地时间
 
@@ -49,6 +49,25 @@ describe('sleepStatsForDay(跨夜归属入睡日)', () => {
   })
   it('进行中状态可被发现', () => {
     expect(sleepStatsForDay(sleeps, now).ongoing?.id).toBe('b')
+  })
+})
+
+describe('findConflictingOngoing(进行中唯一性)', () => {
+  const sleeps: Sleep[] = [
+    { id: 'a', start: iso(2026, 6, 9, 22), end: iso(2026, 6, 10, 5) },
+    { id: 'b', start: iso(2026, 6, 10, 13), end: null },
+  ]
+  it('把另一条改成进行中 → 检出与 b 冲突', () => {
+    const candidate: Sleep = { id: 'a', start: iso(2026, 6, 9, 22), end: null }
+    expect(findConflictingOngoing(sleeps, candidate)?.id).toBe('b')
+  })
+  it('编辑进行中那条自己不算冲突', () => {
+    const candidate: Sleep = { id: 'b', start: iso(2026, 6, 10, 13), end: null }
+    expect(findConflictingOngoing(sleeps, candidate)).toBeNull()
+  })
+  it('已结束的记录不参与冲突', () => {
+    const candidate: Sleep = { id: 'c', start: iso(2026, 6, 10, 15), end: iso(2026, 6, 10, 16) }
+    expect(findConflictingOngoing(sleeps, candidate)).toBeNull()
   })
 })
 
