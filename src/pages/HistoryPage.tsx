@@ -2,10 +2,18 @@
 import { useMemo, useState } from 'react'
 import type { Diaper, Feed, Growth, Sleep } from '../types'
 import { useCollection, useNow } from '../hooks/useStore'
-import { formatMinutes, formatTime, localDateStr, sleepMinutes } from '../lib/dates'
+import { formatMinutes, formatTime, localDateStr, parseLocalDate, sleepMinutes } from '../lib/dates'
 import { diaperKindIcons, diaperKindLabels, feedTypeLabels } from '../lib/labels'
-import { ConfirmDialog } from '../components/ui'
+import { ConfirmDialog, EmptyState } from '../components/ui'
 import { DiaperSheet, FeedSheet, GrowthSheet, SleepSheet } from '../components/editSheets'
+import { pageMemory } from '../lib/pageMemory'
+
+const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+
+function dayHeading(day: string, todayStr: string): string {
+  const weekday = WEEKDAYS[parseLocalDate(day).getDay()]
+  return day === todayStr ? `今天 · ${day}` : `${day} ${weekday}`
+}
 
 type Entry =
   | { kind: 'feed'; ts: string; record: Feed }
@@ -55,7 +63,14 @@ export function HistoryPage() {
   const [editing, setEditing] = useState<Entry | null>(null)
   const [deleting, setDeleting] = useState<Entry | null>(null)
   // 按天分页:一年后全量渲染几千条会卡顿,默认只渲染最近 14 个记录日
-  const [daysShown, setDaysShown] = useState(14)
+  // (切 tab 卸载后通过 pageMemory 记住浏览深度)
+  const [daysShown, setDaysShown] = useState(pageMemory.historyDaysShown)
+  const showMore = () => {
+    setDaysShown((n) => {
+      pageMemory.historyDaysShown = n + 30
+      return n + 30
+    })
+  }
 
   const groups = useMemo(() => {
     const entries: Entry[] = [
@@ -88,16 +103,18 @@ export function HistoryPage() {
   const todayStr = localDateStr(now)
 
   return (
-    <div className="p-4 pb-24">
-      <h1 className="text-xl font-bold px-1 pt-2 mb-3">记录</h1>
+    <div className="page">
+      <h1 className="page-title mb-3">记录</h1>
       {groups.length === 0 && (
-        <p className="text-night-dim text-sm px-1">还没有任何记录,去「今日」页开始吧。</p>
+        <EmptyState icon="🌱">
+          还没有任何记录
+          <br />
+          去「今日」页记下第一笔吧
+        </EmptyState>
       )}
       {groups.slice(0, daysShown).map(([day, entries]) => (
         <div key={day} className="mb-4">
-          <h2 className="text-sm text-night-dim px-1 mb-2">
-            {day === todayStr ? `今天 · ${day}` : day}
-          </h2>
+          <h2 className="text-sm text-night-dim px-1 mb-2">{dayHeading(day, todayStr)}</h2>
           <div className="card divide-y divide-night-line p-0">
             {entries.map((e) => {
               const { icon, text } = entryLabel(e, now)
@@ -114,7 +131,7 @@ export function HistoryPage() {
                     </span>
                   </button>
                   <button
-                    className="min-h-[44px] min-w-[44px] text-night-dim"
+                    className="min-h-[44px] min-w-[44px] text-night-dim active:scale-90 transition-transform"
                     aria-label="删除"
                     onClick={() => setDeleting(e)}
                   >
@@ -128,10 +145,7 @@ export function HistoryPage() {
       ))}
 
       {groups.length > daysShown && (
-        <button
-          className="btn-big w-full py-3 bg-night-card text-night-dim text-sm"
-          onClick={() => setDaysShown((n) => n + 30)}
-        >
+        <button className="btn-big w-full py-3 bg-night-card text-night-dim text-sm" onClick={showMore}>
           加载更早的记录(还有 {groups.length - daysShown} 天)
         </button>
       )}

@@ -21,9 +21,9 @@ export function DiaperSection() {
 
   return (
     <section className="card">
-      <div className="flex items-baseline justify-between mb-3">
+      <div className="flex items-baseline justify-between gap-2 flex-wrap mb-3">
         <h2 className="font-semibold">换尿布</h2>
-        <span className="text-sm text-night-dim">
+        <span className="text-xs text-night-dim text-right">
           今日 {stats.total} 次(💧{stats.wet} 💩{stats.dirty} 混{stats.mixed})
         </span>
       </div>
@@ -31,7 +31,7 @@ export function DiaperSection() {
         {(Object.keys(diaperKindLabels) as DiaperKind[]).map((k) => (
           <button
             key={k}
-            className={`btn-big py-4 flex flex-col items-center gap-1 ${
+            className={`btn-big py-4 flex flex-col items-center gap-1 transition-colors ${
               justSaved === k ? 'bg-emerald-900 text-emerald-200' : 'bg-night-line'
             }`}
             onClick={() => record(k)}

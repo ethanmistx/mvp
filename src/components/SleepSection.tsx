@@ -3,7 +3,7 @@ import type { Sleep } from '../types'
 import { storage } from '../storage'
 import { useCollection, useNow } from '../hooks/useStore'
 import { sleepStatsForDay } from '../lib/stats'
-import { formatMinutes, formatTime, sleepMinutes } from '../lib/dates'
+import { formatHms, formatMinutes, formatTime } from '../lib/dates'
 import { newId } from '../lib/id'
 import { SleepSheet } from './editSheets'
 
@@ -36,13 +36,11 @@ export function SleepSection() {
     }
   }
 
-  const ongoingMin = ongoing ? sleepMinutes(ongoing.start, null, now) : 0
-
   return (
     <section className="card">
-      <div className="flex items-baseline justify-between mb-3">
+      <div className="flex items-baseline justify-between gap-2 flex-wrap mb-3">
         <h2 className="font-semibold">睡眠</h2>
-        <span className="text-sm text-night-dim">
+        <span className="text-xs text-night-dim text-right">
           今日 {formatMinutes(stats.totalMinutes)} · {stats.segments} 段
           {stats.longestMinutes > 0 && ` · 最长 ${formatMinutes(stats.longestMinutes)}`}
         </span>
@@ -50,15 +48,16 @@ export function SleepSection() {
       <button
         className={`btn-big w-full py-6 text-lg ${
           ongoing
-            ? 'bg-indigo-900 text-indigo-100 ring-2 ring-indigo-400 animate-pulse'
+            ? 'bg-indigo-950/90 text-indigo-100 ring-1 ring-indigo-400/60 animate-breathe'
             : 'bg-night-line'
         }`}
         onClick={() => void toggle()}
       >
         {ongoing ? (
           <span>
-            😴 睡眠中 {formatMinutes(ongoingMin)}
-            <span className="block text-sm mt-1 text-indigo-300">
+            😴 睡眠中{' '}
+            <span className="tabular-nums font-semibold">{formatHms(ongoing.start, now)}</span>
+            <span className="block text-sm mt-1 font-normal text-indigo-300/90">
               {formatTime(ongoing.start)} 入睡 · 点按结束
             </span>
           </span>
@@ -67,7 +66,7 @@ export function SleepSection() {
         )}
       </button>
       <button
-        className="btn-big w-full py-2.5 mt-2 text-sm text-night-dim bg-transparent border border-night-line"
+        className="btn-ghost w-full py-2.5 mt-2 text-sm"
         onClick={() =>
           setManualDraft({
             id: newId(),

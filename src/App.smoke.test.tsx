@@ -85,7 +85,7 @@ describe('App 冒烟', () => {
     render(<App />)
     await screen.findByText('小测')
     fireEvent.click(screen.getByText('设置'))
-    await screen.findByText('AI 解读')
+    await screen.findByText(/AI 解读/)
 
     // 预设切换:Kimi → 接口地址自动填入 moonshot
     fireEvent.click(screen.getByText('Kimi'))

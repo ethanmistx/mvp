@@ -26,14 +26,16 @@ export function TodayPage({ profile }: { profile: BabyProfile }) {
   }, [feeds, sleeps, diapers, growths, now])
 
   return (
-    <div className="p-4 space-y-3 pb-24">
+    <div className="page">
       <header className="px-1 pt-2">
         <h1 className="text-xl font-bold">{profile.name}</h1>
         <p className="text-night-dim text-sm mt-0.5">
           出生第 {dayOfLife(profile.birthDate, now)} 天 · {months} 个月 {days} 天
         </p>
         {streak > 0 && (
-          <p className="text-warm text-sm mt-1.5">🔥 已连续记录 {streak} 天</p>
+          <p className="inline-flex items-center gap-1 mt-2 text-warm text-xs bg-warm/10 rounded-full px-2.5 py-1">
+            🔥 已连续记录 {streak} 天
+          </p>
         )}
       </header>
       <FeedSection />

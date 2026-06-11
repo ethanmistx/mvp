@@ -1,19 +1,51 @@
 // 四类记录的新建/编辑底部弹层。新建与编辑共用,保证字段一致。
 // 约定:调用方只在打开时才挂载这些组件(条件渲染),状态由 initial 在挂载时初始化,
 // 关闭即卸载,无需手动重置。
-// 校验失败一律给出可见的错误文案,绝不静默 return。
+// 校验失败一律给出可见的错误文案,绝不静默 return;用户一旦修改输入即清除错误。
 import { useState } from 'react'
 import type { Diaper, DiaperKind, Feed, FeedType, Growth, Sleep } from '../types'
 import { fromDatetimeLocal, toDatetimeLocal } from '../lib/dates'
 import { findConflictingOngoing } from '../lib/stats'
 import { diaperKindLabels, feedTypeLabels } from '../lib/labels'
 import { Field, Segmented, Sheet, Stepper, inputCls } from './ui'
+import { showToast } from './toast'
 
 const AMOUNT_PRESETS = [60, 90, 120, 150]
 
 function ErrorText({ message }: { message: string | null }) {
   if (!message) return null
   return <p className="text-sm text-red-300 mb-3">{message}</p>
+}
+
+/** 时间输入 + 「现在」快捷键:深夜补记时少敲一次原生选择器 */
+function DateTimeField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <Field label={label}>
+      <div className="flex gap-2">
+        <input
+          type="datetime-local"
+          className={`${inputCls} flex-1`}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <button
+          type="button"
+          className="btn-secondary px-4 text-sm shrink-0"
+          onClick={() => onChange(toDatetimeLocal(new Date().toISOString()))}
+        >
+          现在
+        </button>
+      </div>
+    </Field>
+  )
 }
 
 export function FeedSheet({
@@ -52,6 +84,7 @@ export function FeedSheet({
       minutes: needsMinutes ? minutes : undefined,
       note: note.trim() || undefined,
     })
+    showToast('已记录 ✓')
     onClose()
   }
 
@@ -77,14 +110,19 @@ export function FeedSheet({
           <Stepper value={minutes} onChange={setMinutes} step={5} min={1} unit="分钟" presets={[10, 15, 20, 30]} />
         </Field>
       )}
-      <Field label="时间(默认现在)">
-        <input type="datetime-local" className={inputCls} value={ts} onChange={(e) => setTs(e.target.value)} />
-      </Field>
+      <DateTimeField
+        label="时间(默认现在)"
+        value={ts}
+        onChange={(v) => {
+          setTs(v)
+          setError(null)
+        }}
+      />
       <Field label="备注(可选)">
         <input type="text" className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="如:吐奶一点" />
       </Field>
       <ErrorText message={error} />
-      <button className="btn-big w-full py-4 bg-warm text-night-bg text-lg" onClick={save}>
+      <button className="btn-primary w-full py-4 text-lg" onClick={save}>
         保存
       </button>
     </Sheet>
@@ -106,9 +144,7 @@ export function SleepSheet({
   onClose: () => void
 }) {
   const [start, setStart] = useState(toDatetimeLocal(initial.start))
-  const [end, setEnd] = useState(
-    toDatetimeLocal(initial.end ?? new Date().toISOString()),
-  )
+  const [end, setEnd] = useState(toDatetimeLocal(initial.end ?? new Date().toISOString()))
   const [ongoing, setOngoing] = useState(initial.end === null)
   const [error, setError] = useState<string | null>(null)
 
@@ -137,14 +173,20 @@ export function SleepSheet({
       return
     }
     onSave(candidate)
+    showToast('已记录 ✓')
     onClose()
   }
 
   return (
     <Sheet open={open} onClose={onClose} title="睡眠记录">
-      <Field label="入睡时间">
-        <input type="datetime-local" className={inputCls} value={start} onChange={(e) => setStart(e.target.value)} />
-      </Field>
+      <DateTimeField
+        label="入睡时间"
+        value={start}
+        onChange={(v) => {
+          setStart(v)
+          setError(null)
+        }}
+      />
       <Field label="状态">
         <Segmented
           options={[
@@ -152,16 +194,24 @@ export function SleepSheet({
             { value: 'ongoing', label: '还在睡' },
           ]}
           value={ongoing ? 'ongoing' : 'done'}
-          onChange={(v) => setOngoing(v === 'ongoing')}
+          onChange={(v) => {
+            setOngoing(v === 'ongoing')
+            setError(null)
+          }}
         />
       </Field>
       {!ongoing && (
-        <Field label="醒来时间">
-          <input type="datetime-local" className={inputCls} value={end} onChange={(e) => setEnd(e.target.value)} />
-        </Field>
+        <DateTimeField
+          label="醒来时间"
+          value={end}
+          onChange={(v) => {
+            setEnd(v)
+            setError(null)
+          }}
+        />
       )}
       <ErrorText message={error} />
-      <button className="btn-big w-full py-4 bg-warm text-night-bg text-lg" onClick={save}>
+      <button className="btn-primary w-full py-4 text-lg" onClick={save}>
         保存
       </button>
     </Sheet>
@@ -191,6 +241,7 @@ export function DiaperSheet({
       return
     }
     onSave({ id: initial.id, ts: tsIso, kind, note: note.trim() || undefined })
+    showToast('已记录 ✓')
     onClose()
   }
 
@@ -206,14 +257,19 @@ export function DiaperSheet({
           onChange={setKind}
         />
       </Field>
-      <Field label="时间">
-        <input type="datetime-local" className={inputCls} value={ts} onChange={(e) => setTs(e.target.value)} />
-      </Field>
+      <DateTimeField
+        label="时间"
+        value={ts}
+        onChange={(v) => {
+          setTs(v)
+          setError(null)
+        }}
+      />
       <Field label="备注(可选)">
         <input type="text" className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} />
       </Field>
       <ErrorText message={error} />
-      <button className="btn-big w-full py-4 bg-warm text-night-bg text-lg" onClick={save}>
+      <button className="btn-primary w-full py-4 text-lg" onClick={save}>
         保存
       </button>
     </Sheet>
@@ -242,6 +298,29 @@ export function GrowthSheet({
     return s.trim() !== '' && Number.isFinite(n) && n > 0 ? n : undefined
   }
 
+  const numField = (
+    label: string,
+    value: string,
+    setValue: (v: string) => void,
+    placeholder: string,
+    step: string,
+  ) => (
+    <Field label={label}>
+      <input
+        type="number"
+        inputMode="decimal"
+        step={step}
+        className={inputCls}
+        value={value}
+        onChange={(e) => {
+          setValue(e.target.value)
+          setError(null)
+        }}
+        placeholder={placeholder}
+      />
+    </Field>
+  )
+
   const save = () => {
     if (date.trim() === '') {
       setError('请选择测量日期。')
@@ -259,25 +338,28 @@ export function GrowthSheet({
       return
     }
     onSave(g)
+    showToast('已记录 ✓')
     onClose()
   }
 
   return (
     <Sheet open={open} onClose={onClose} title="生长测量">
       <Field label="测量日期">
-        <input type="date" className={inputCls} value={date} onChange={(e) => setDate(e.target.value)} />
+        <input
+          type="date"
+          className={inputCls}
+          value={date}
+          onChange={(e) => {
+            setDate(e.target.value)
+            setError(null)
+          }}
+        />
       </Field>
-      <Field label="体重 kg">
-        <input type="number" inputMode="decimal" step="0.01" className={inputCls} value={weightKg} onChange={(e) => setWeightKg(e.target.value)} placeholder="如 7.25" />
-      </Field>
-      <Field label="身长 cm">
-        <input type="number" inputMode="decimal" step="0.1" className={inputCls} value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} placeholder="如 68.5" />
-      </Field>
-      <Field label="头围 cm">
-        <input type="number" inputMode="decimal" step="0.1" className={inputCls} value={headCm} onChange={(e) => setHeadCm(e.target.value)} placeholder="如 43.0" />
-      </Field>
+      {numField('体重 kg', weightKg, setWeightKg, '如 7.25', '0.01')}
+      {numField('身长 cm', lengthCm, setLengthCm, '如 68.5', '0.1')}
+      {numField('头围 cm', headCm, setHeadCm, '如 43.0', '0.1')}
       <ErrorText message={error} />
-      <button className="btn-big w-full py-4 bg-warm text-night-bg text-lg" onClick={save}>
+      <button className="btn-primary w-full py-4 text-lg" onClick={save}>
         保存
       </button>
     </Sheet>

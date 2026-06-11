@@ -97,7 +97,7 @@ export function AiInsightSection() {
 
   return (
     <section className="card">
-      <h2 className="font-semibold mb-1">AI 解读</h2>
+      <h2 className="font-semibold mb-1">🤖 AI 解读</h2>
       <p className="text-xs text-night-dim mb-3">
         用你自己的大模型 API Key 解读最近记录。Key 只保存在本机,不会进入导出备份;
         点「生成解读」时,只发送统计摘要(次数/时长/奶量/生长区间),不含备注原文。
@@ -151,15 +151,22 @@ export function AiInsightSection() {
       </Field>
 
       <div className="flex gap-2">
-        <button className="btn-big flex-1 py-3 bg-night-line" onClick={saveConfig}>
+        <button className="btn-secondary flex-1 py-3" onClick={saveConfig}>
           {savedTip ? '已保存 ✓' : '保存配置'}
         </button>
         <button
-          className="btn-big flex-1 py-3 bg-warm text-night-bg disabled:opacity-40"
+          className="btn-primary flex-1 py-3"
           disabled={!isConfigComplete(cfg) || busy}
           onClick={() => void generate()}
         >
-          {busy ? '生成中…' : '生成解读'}
+          {busy ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="spinner" />
+              生成中…
+            </span>
+          ) : (
+            '生成解读'
+          )}
         </button>
       </div>
 
@@ -173,7 +180,7 @@ export function AiInsightSection() {
           <div className="rounded-xl bg-night-bg border border-night-line p-3 text-sm leading-relaxed whitespace-pre-wrap">
             {insight.text}
           </div>
-          <button className="btn-big w-full py-3 mt-2 bg-night-line" onClick={() => void copy()}>
+          <button className="btn-secondary w-full py-3 mt-2" onClick={() => void copy()}>
             {copied ? '已复制 ✓' : '复制解读'}
           </button>
           <p className="text-xs text-night-dim mt-2 text-center">

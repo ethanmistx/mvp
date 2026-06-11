@@ -30,9 +30,9 @@ export function FeedSection() {
 
   return (
     <section className="card">
-      <div className="flex items-baseline justify-between mb-3">
+      <div className="flex items-baseline justify-between gap-2 flex-wrap mb-3">
         <h2 className="font-semibold">喂养</h2>
-        <span className="text-sm text-night-dim">
+        <span className="text-xs text-night-dim text-right">
           今日 {stats.count} 次
           {stats.totalMl > 0 && ` · ${stats.totalMl} ml`}
           {stats.nurseMinutes > 0 && ` · 亲喂 ${stats.nurseMinutes} 分`}
@@ -42,7 +42,7 @@ export function FeedSection() {
         {(Object.keys(feedTypeLabels) as FeedType[]).map((t) => (
           <button
             key={t}
-            className="btn-big py-3 bg-night-line flex flex-col items-center gap-1"
+            className="btn-secondary py-3 flex flex-col items-center gap-1"
             onClick={() => openNew(t)}
           >
             <span className="text-2xl">{feedTypeIcons[t]}</span>

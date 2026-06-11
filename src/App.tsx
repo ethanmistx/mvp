@@ -10,13 +10,19 @@ const GrowthPage = lazy(() =>
   import('./pages/GrowthPage').then((m) => ({ default: m.GrowthPage })),
 )
 import { TabBar, type Tab } from './components/TabBar'
+import { Toaster } from './components/toast'
 
 export default function App() {
   const { profile, saveProfile } = useProfile()
   const [tab, setTab] = useState<Tab>('today')
 
   if (profile === undefined) {
-    return <div className="min-h-screen flex items-center justify-center text-night-dim">…</div>
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-2 text-night-dim">
+        <span className="text-3xl">🌙</span>
+        <span className="text-sm">正在打开…</span>
+      </div>
+    )
   }
   if (profile === null) {
     return <Onboarding onSave={(p) => void saveProfile(p)} />
@@ -27,12 +33,20 @@ export default function App() {
       {tab === 'today' && <TodayPage profile={profile} />}
       {tab === 'history' && <HistoryPage />}
       {tab === 'growth' && (
-        <Suspense fallback={<div className="p-6 text-night-dim">加载中…</div>}>
+        <Suspense
+          fallback={
+            <div className="p-6 flex items-center gap-2 text-night-dim text-sm">
+              <span className="spinner" />
+              加载图表…
+            </div>
+          }
+        >
           <GrowthPage profile={profile} />
         </Suspense>
       )}
       {tab === 'settings' && <SettingsPage profile={profile} />}
       <TabBar active={tab} onChange={setTab} />
+      <Toaster />
     </div>
   )
 }

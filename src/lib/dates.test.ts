@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   ageInMonths,
   dayOfLife,
+  formatHms,
   fromDatetimeLocal,
   monthsAndDays,
   sleepBelongsToDay,
@@ -72,6 +73,20 @@ describe('sleepMinutes', () => {
   it('进行中的段按 now 截断', () => {
     const start = new Date(2026, 5, 10, 13, 0).toISOString()
     expect(sleepMinutes(start, null, new Date(2026, 5, 10, 13, 45))).toBe(45)
+  })
+})
+
+describe('formatHms(进行中实时计时)', () => {
+  const start = new Date(2026, 5, 10, 13, 0, 0)
+  it('不足 1 小时显示 M:SS', () => {
+    expect(formatHms(start.toISOString(), new Date(2026, 5, 10, 13, 5, 7))).toBe('5:07')
+  })
+  it('超过 1 小时显示 H:MM:SS', () => {
+    expect(formatHms(start.toISOString(), new Date(2026, 5, 10, 15, 3, 9))).toBe('2:03:09')
+  })
+  it('起点即现在显示 0:00,时钟回拨不出现负数', () => {
+    expect(formatHms(start.toISOString(), start)).toBe('0:00')
+    expect(formatHms(start.toISOString(), new Date(2026, 5, 10, 12, 59))).toBe('0:00')
   })
 })
 

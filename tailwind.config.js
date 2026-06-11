@@ -9,11 +9,12 @@ export default {
           bg: '#1c1917',
           card: '#292524',
           line: '#44403c',
-          dim: '#a8a29e',
+          dim: '#b0a9a3',
           text: '#e7e5e4',
         },
         warm: {
-          DEFAULT: '#fbbf24',
+          // amber-500:比 amber-400 暗一档,降低深夜大面积主按钮的眩光
+          DEFAULT: '#f59e0b',
           soft: '#fcd34d',
           deep: '#b45309',
         },

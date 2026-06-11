@@ -116,6 +116,16 @@ export function formatMinutes(min: number): string {
   return `${h} 小时 ${m} 分`
 }
 
+/** 实时计时显示:「H:MM:SS」/「M:SS」,秒级跳动让进行中状态显得鲜活 */
+export function formatHms(startIso: string, now: Date): string {
+  const totalSec = Math.max(0, Math.floor((now.getTime() - new Date(startIso).getTime()) / 1000))
+  const h = Math.floor(totalSec / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = totalSec % 60
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`
+}
+
 /** 距现在的相对时间文案,如「35 分钟前」「2 小时前」 */
 export function timeAgo(iso: string, now: Date): string {
   const diffMin = Math.max(0, Math.floor((now.getTime() - new Date(iso).getTime()) / 60000))

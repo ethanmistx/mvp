@@ -49,7 +49,7 @@ export function Onboarding({ onSave }: { onSave: (p: BabyProfile) => void }) {
         />
       </Field>
       <button
-        className="btn-big w-full py-4 mt-4 bg-warm text-night-bg text-lg disabled:opacity-40"
+        className="btn-primary w-full py-4 mt-4 text-lg"
         disabled={!valid}
         onClick={() => onSave({ id: newId(), name: name.trim(), birthDate, sex })}
       >

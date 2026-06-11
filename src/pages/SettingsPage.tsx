@@ -105,11 +105,11 @@ export function SettingsPage({ profile }: { profile: BabyProfile }) {
   }
 
   return (
-    <div className="p-4 pb-24 space-y-4">
-      <h1 className="text-xl font-bold px-1 pt-2">设置</h1>
+    <div className="page">
+      <h1 className="page-title">设置</h1>
 
       <section className="card">
-        <h2 className="font-semibold mb-3">宝宝档案</h2>
+        <h2 className="font-semibold mb-3">👶 宝宝档案</h2>
         <Field label="小名">
           <input type="text" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
@@ -136,7 +136,7 @@ export function SettingsPage({ profile }: { profile: BabyProfile }) {
           <p className="text-sm text-red-300 mb-3">出生日期不能晚于今天。</p>
         )}
         <button
-          className="btn-big w-full py-3 bg-warm text-night-bg disabled:opacity-40"
+          className="btn-primary w-full py-3"
           disabled={!profileChanged || name.trim() === '' || !birthDateValid}
           onClick={saveBaby}
         >
@@ -145,22 +145,19 @@ export function SettingsPage({ profile }: { profile: BabyProfile }) {
       </section>
 
       <section className="card">
-        <h2 className="font-semibold mb-1">数据摘要</h2>
+        <h2 className="font-semibold mb-1">📄 数据摘要</h2>
         <p className="text-xs text-night-dim mb-3">
           生成最近 24 小时 / 7 天的结构化文字,可复制后发给医生,或粘贴给 AI 助手解读。
         </p>
-        <button className="btn-big w-full py-3 bg-night-line" onClick={() => void makeSummary()}>
+        <button className="btn-secondary w-full py-3" onClick={() => void makeSummary()}>
           生成摘要
         </button>
         {summary && (
           <div className="mt-3">
-            <textarea
-              readOnly
-              className={`${inputCls} h-48 text-xs leading-relaxed`}
-              value={summary}
-              onFocus={(e) => e.target.select()}
-            />
-            <button className="btn-big w-full py-3 mt-2 bg-warm text-night-bg" onClick={() => void copySummary()}>
+            <pre className="w-full h-48 overflow-y-auto rounded-xl bg-night-bg border border-night-line px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap font-[inherit]">
+              {summary}
+            </pre>
+            <button className="btn-primary w-full py-3 mt-2" onClick={() => void copySummary()}>
               {copied ? '已复制 ✓' : '一键复制'}
             </button>
           </div>
@@ -170,15 +167,15 @@ export function SettingsPage({ profile }: { profile: BabyProfile }) {
       <AiInsightSection />
 
       <section className="card">
-        <h2 className="font-semibold mb-1">数据备份</h2>
+        <h2 className="font-semibold mb-1">💾 数据备份</h2>
         <p className="text-xs text-night-dim mb-3">
           所有数据只保存在本机浏览器里,不上传任何服务器。换设备或重装前请先导出。
         </p>
         <div className="flex gap-2">
-          <button className="btn-big flex-1 py-3 bg-night-line" onClick={() => void doExport()}>
+          <button className="btn-secondary flex-1 py-3" onClick={() => void doExport()}>
             导出 JSON
           </button>
-          <button className="btn-big flex-1 py-3 bg-night-line" onClick={() => fileRef.current?.click()}>
+          <button className="btn-secondary flex-1 py-3" onClick={() => fileRef.current?.click()}>
             导入 JSON
           </button>
         </div>

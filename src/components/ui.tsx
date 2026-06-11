@@ -15,19 +15,23 @@ export function Sheet({
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-night-card rounded-t-3xl p-5 pb-8 max-h-[88vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">{title}</h2>
-          <button
-            className="btn-big px-4 py-2 text-night-dim"
-            onClick={onClose}
-            aria-label="关闭"
-          >
-            ✕
-          </button>
+      <div className="absolute inset-0 bg-black/60 animate-fade-in" onClick={onClose} />
+      <div className="sheet-panel relative w-full max-w-md bg-night-card rounded-t-3xl px-5 pb-8 overflow-y-auto animate-sheet-in">
+        {/* 拖拽把手视觉示意 */}
+        <div className="sticky top-0 bg-night-card pt-2.5 pb-1 -mx-5 px-5">
+          <div className="mx-auto w-9 h-1 rounded-full bg-night-line" />
+          <div className="flex items-center justify-between mt-2">
+            <h2 className="text-lg font-semibold">{title}</h2>
+            <button
+              className="min-h-[44px] min-w-[44px] -mr-2 flex items-center justify-center rounded-2xl text-night-dim active:scale-95 transition-transform"
+              onClick={onClose}
+              aria-label="关闭"
+            >
+              ✕
+            </button>
+          </div>
         </div>
-        {children}
+        <div className="pt-2">{children}</div>
       </div>
     </div>
   )
@@ -54,12 +58,12 @@ export function ConfirmDialog({
   if (!open) return null
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
-      <div className="absolute inset-0 bg-black/70" onClick={onCancel} />
-      <div className="relative w-full max-w-xs card p-5">
+      <div className="absolute inset-0 bg-black/70 animate-fade-in" onClick={onCancel} />
+      <div className="relative w-full max-w-xs card p-5 animate-scale-in">
         <p className="font-semibold mb-1">{title}</p>
         {message && <p className="text-sm text-night-dim mb-4">{message}</p>}
         <div className="flex gap-3 mt-3">
-          <button className="btn-big flex-1 py-3 bg-night-line" onClick={onCancel}>
+          <button className="btn-secondary flex-1 py-3" onClick={onCancel}>
             取消
           </button>
           <button
@@ -96,18 +100,18 @@ export function Stepper({
     <div>
       <div className="flex items-center justify-center gap-4">
         <button
-          className="btn-big w-14 h-14 bg-night-line text-2xl"
+          className="btn-secondary w-14 h-14 text-2xl"
           onClick={() => onChange(Math.max(min, value - step))}
           aria-label={`减 ${step}`}
         >
           −
         </button>
-        <div className="w-28 text-center">
+        <div className="min-w-[7rem] text-center">
           <span className="text-4xl font-bold tabular-nums">{value}</span>
           <span className="text-night-dim ml-1">{unit}</span>
         </div>
         <button
-          className="btn-big w-14 h-14 bg-night-line text-2xl"
+          className="btn-secondary w-14 h-14 text-2xl"
           onClick={() => onChange(value + step)}
           aria-label={`加 ${step}`}
         >
@@ -119,7 +123,7 @@ export function Stepper({
           {presets.map((p) => (
             <button
               key={p}
-              className={`btn-big px-4 py-2 text-sm ${
+              className={`btn-big min-h-[44px] px-4 text-sm transition-colors ${
                 value === p ? 'bg-warm text-night-bg' : 'bg-night-line'
               }`}
               onClick={() => onChange(p)}
@@ -148,7 +152,7 @@ export function Segmented<T extends string>({
       {options.map((o) => (
         <button
           key={o.value}
-          className={`btn-big flex-1 py-3 text-sm ${
+          className={`btn-big flex-1 py-3 text-sm transition-colors ${
             value === o.value ? 'bg-warm text-night-bg font-semibold' : 'bg-night-line'
           }`}
           onClick={() => onChange(o.value)}
@@ -169,5 +173,15 @@ export function Field({ label, children }: { label: string; children: ReactNode 
   )
 }
 
+/** 卡片化的空状态提示 */
+export function EmptyState({ icon, children }: { icon: string; children: ReactNode }) {
+  return (
+    <div className="card text-center py-10">
+      <p className="text-3xl mb-2">{icon}</p>
+      <p className="text-sm text-night-dim leading-relaxed">{children}</p>
+    </div>
+  )
+}
+
 export const inputCls =
-  'w-full min-h-[44px] rounded-xl bg-night-bg border border-night-line px-3 py-2 text-night-text [color-scheme:dark]'
+  'w-full min-h-[44px] rounded-xl bg-night-bg border border-night-line px-3 py-2 text-night-text'

@@ -14,11 +14,18 @@ export function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) =
         {tabs.map((t) => (
           <button
             key={t.id}
-            className={`flex-1 min-h-[56px] flex flex-col items-center justify-center gap-0.5 ${
+            className={`relative flex-1 min-h-[56px] flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-[color,transform] select-none ${
               active === t.id ? 'text-warm' : 'text-night-dim'
             }`}
+            aria-current={active === t.id ? 'page' : undefined}
             onClick={() => onChange(t.id)}
           >
+            {/* 当前页指示条 */}
+            <span
+              className={`absolute top-0 h-0.5 w-8 rounded-full transition-colors ${
+                active === t.id ? 'bg-warm' : 'bg-transparent'
+              }`}
+            />
             <span className="text-xl leading-none">{t.icon}</span>
             <span className="text-[11px]">{t.label}</span>
           </button>
