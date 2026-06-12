@@ -3,10 +3,21 @@
 // 关闭即卸载,无需手动重置。
 // 校验失败一律给出可见的错误文案,绝不静默 return;用户一旦修改输入即清除错误。
 import { useState } from 'react'
-import type { Diaper, DiaperKind, Feed, FeedType, Growth, Sleep } from '../types'
-import { fromDatetimeLocal, toDatetimeLocal } from '../lib/dates'
+import type {
+  Diaper,
+  DiaperKind,
+  Feed,
+  FeedType,
+  Growth,
+  MedCourse,
+  MedDose,
+  Sleep,
+  Temperature,
+  TempSite,
+} from '../types'
+import { fromDatetimeLocal, localDateStr, parseLocalDate, toDatetimeLocal } from '../lib/dates'
 import { findConflictingOngoing } from '../lib/stats'
-import { diaperKindLabels, feedTypeLabels } from '../lib/labels'
+import { diaperKindLabels, feedTypeLabels, tempSiteLabels } from '../lib/labels'
 import { Field, Segmented, Sheet, Stepper, inputCls } from './ui'
 import { showToast } from './toast'
 
@@ -268,6 +279,249 @@ export function DiaperSheet({
       <Field label="备注(可选)">
         <input type="text" className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} />
       </Field>
+      <ErrorText message={error} />
+      <button className="btn-primary w-full py-4 text-lg" onClick={save}>
+        保存
+      </button>
+    </Sheet>
+  )
+}
+
+export function TempSheet({
+  open,
+  initial,
+  onSave,
+  onClose,
+}: {
+  open: boolean
+  initial: Temperature
+  onSave: (t: Temperature) => void
+  onClose: () => void
+}) {
+  const [celsius, setCelsius] = useState(initial.celsius)
+  const [site, setSite] = useState<TempSite>(initial.site ?? 'armpit')
+  const [antipyretic, setAntipyretic] = useState(initial.antipyretic ?? false)
+  const [ts, setTs] = useState(toDatetimeLocal(initial.ts))
+  const [note, setNote] = useState(initial.note ?? '')
+  const [error, setError] = useState<string | null>(null)
+
+  const save = () => {
+    const tsIso = fromDatetimeLocal(ts)
+    if (tsIso === null) {
+      setError('请填写有效的时间。')
+      return
+    }
+    if (celsius < 30 || celsius > 45) {
+      setError('体温数值看起来不对,请检查。')
+      return
+    }
+    onSave({
+      id: initial.id,
+      ts: tsIso,
+      celsius: Math.round(celsius * 10) / 10,
+      site,
+      antipyretic: antipyretic || undefined,
+      note: note.trim() || undefined,
+    })
+    showToast('已记录 ✓')
+    onClose()
+  }
+
+  return (
+    <Sheet open={open} onClose={onClose} title="体温记录">
+      <Field label="体温">
+        <Stepper
+          value={celsius}
+          onChange={(v) => {
+            setCelsius(Math.round(v * 10) / 10)
+            setError(null)
+          }}
+          step={0.1}
+          min={30}
+          unit="°C"
+          presets={[36.5, 37.5, 38.5, 39]}
+          format={(v) => v.toFixed(1)}
+        />
+      </Field>
+      <Field label="测量部位">
+        <Segmented
+          options={(Object.keys(tempSiteLabels) as TempSite[]).map((s) => ({
+            value: s,
+            label: tempSiteLabels[s],
+          }))}
+          value={site}
+          onChange={setSite}
+        />
+      </Field>
+      <Field label="退烧药(仅记录事实)">
+        <Segmented
+          options={[
+            { value: 'no', label: '未用' },
+            { value: 'yes', label: '已用' },
+          ]}
+          value={antipyretic ? 'yes' : 'no'}
+          onChange={(v) => setAntipyretic(v === 'yes')}
+        />
+      </Field>
+      <DateTimeField
+        label="时间(默认现在)"
+        value={ts}
+        onChange={(v) => {
+          setTs(v)
+          setError(null)
+        }}
+      />
+      <Field label="备注(可选)">
+        <input type="text" className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="如:手脚偏凉" />
+      </Field>
+      <ErrorText message={error} />
+      <button className="btn-primary w-full py-4 text-lg" onClick={save}>
+        保存
+      </button>
+    </Sheet>
+  )
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/** 由起始日 + 天数算含当天的结束日 */
+function endDateFromDays(startDate: string, days: number): string {
+  return localDateStr(new Date(parseLocalDate(startDate).getTime() + (days - 1) * DAY_MS))
+}
+
+function daysBetweenInclusive(startDate: string, endDate: string): number {
+  return Math.max(
+    1,
+    Math.round((parseLocalDate(endDate).getTime() - parseLocalDate(startDate).getTime()) / DAY_MS) + 1,
+  )
+}
+
+export function MedCourseSheet({
+  open,
+  initial,
+  onSave,
+  onDelete,
+  onClose,
+}: {
+  open: boolean
+  initial: MedCourse
+  onSave: (c: MedCourse) => void
+  /** 编辑已有疗程时提供;新建时不传 */
+  onDelete?: () => void
+  onClose: () => void
+}) {
+  const [name, setName] = useState(initial.name)
+  const [timesPerDay, setTimesPerDay] = useState(initial.timesPerDay)
+  const [startDate, setStartDate] = useState(initial.startDate)
+  const [days, setDays] = useState(daysBetweenInclusive(initial.startDate, initial.endDate))
+  const [note, setNote] = useState(initial.note ?? '')
+  const [error, setError] = useState<string | null>(null)
+
+  const save = () => {
+    if (name.trim() === '') {
+      setError('请填写药名。')
+      return
+    }
+    if (startDate.trim() === '') {
+      setError('请选择开始日期。')
+      return
+    }
+    onSave({
+      id: initial.id,
+      name: name.trim(),
+      timesPerDay,
+      startDate,
+      endDate: endDateFromDays(startDate, days),
+      note: note.trim() || undefined,
+    })
+    showToast('已保存 ✓')
+    onClose()
+  }
+
+  return (
+    <Sheet open={open} onClose={onClose} title="用药疗程">
+      <Field label="药名">
+        <input
+          type="text"
+          className={inputCls}
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value)
+            setError(null)
+          }}
+          placeholder="如:头孢克肟"
+        />
+      </Field>
+      <Field label="每日次数">
+        <Stepper value={timesPerDay} onChange={setTimesPerDay} step={1} min={1} unit="次/日" presets={[1, 2, 3]} />
+      </Field>
+      <Field label="开始日期">
+        <input
+          type="date"
+          className={inputCls}
+          value={startDate}
+          onChange={(e) => {
+            setStartDate(e.target.value)
+            setError(null)
+          }}
+        />
+      </Field>
+      <Field label="疗程天数">
+        <Stepper value={days} onChange={setDays} step={1} min={1} unit="天" presets={[3, 5, 7, 14]} />
+      </Field>
+      <Field label="剂量备注(可选)">
+        <input type="text" className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="如:2.5ml/次,餐后" />
+      </Field>
+      <ErrorText message={error} />
+      <button className="btn-primary w-full py-4 text-lg" onClick={save}>
+        保存
+      </button>
+      {onDelete && (
+        <button className="btn-ghost w-full py-3 mt-2 text-sm" onClick={onDelete}>
+          删除该疗程及其打卡记录
+        </button>
+      )}
+    </Sheet>
+  )
+}
+
+export function DoseSheet({
+  open,
+  initial,
+  courseName,
+  onSave,
+  onClose,
+}: {
+  open: boolean
+  initial: MedDose
+  courseName: string
+  onSave: (d: MedDose) => void
+  onClose: () => void
+}) {
+  const [ts, setTs] = useState(toDatetimeLocal(initial.ts))
+  const [error, setError] = useState<string | null>(null)
+
+  const save = () => {
+    const tsIso = fromDatetimeLocal(ts)
+    if (tsIso === null) {
+      setError('请填写有效的时间。')
+      return
+    }
+    onSave({ ...initial, ts: tsIso })
+    showToast('已记录 ✓')
+    onClose()
+  }
+
+  return (
+    <Sheet open={open} onClose={onClose} title={`服药 · ${courseName}`}>
+      <DateTimeField
+        label="服药时间"
+        value={ts}
+        onChange={(v) => {
+          setTs(v)
+          setError(null)
+        }}
+      />
       <ErrorText message={error} />
       <button className="btn-primary w-full py-4 text-lg" onClick={save}>
         保存

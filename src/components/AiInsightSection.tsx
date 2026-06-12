@@ -65,6 +65,9 @@ export function AiInsightSection() {
         sleeps: bundle.sleeps,
         diapers: bundle.diapers,
         growths: bundle.growths,
+        temperatures: bundle.temperatures,
+        medCourses: bundle.medCourses,
+        medDoses: bundle.medDoses,
         now: new Date(),
       })
       const text = await chatComplete(cfg, {

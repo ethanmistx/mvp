@@ -32,6 +32,7 @@ Dark is the default (built for night feeds); a light theme and follow-system mod
 - **Sleep**: one big start/stop button with a gentle breathing glow and a live seconds timer while in progress; manual backfill; overnight sleep is attributed to the day it started; daily total / segments / longest stretch
 - **Diapers**: three big one-tap buttons (wet / dirty / mixed) with inline "saved ✓" feedback
 - **Growth curves**: weight / length / head circumference; WHO 2006 P3 / P50 / P97 reference lines (sex-specific) plus the baby's own points, x-axis in months of age; the latest measurement gets a plain-language band description
+- **Health (sick spells)**: quick temperature logging (site / antipyretic given) with a 72-hour mini chart (neutral 38 °C reference line); medication-course check-ins (drug name / times per day / course length, today's N/M progress) — the generated summary doubles as a course-of-illness record for the pediatrician. Deliberately generic (fevers, antibiotic courses, post-vaccine observation) and **never renders "fever/abnormal" judgments**
 - **Retention**: the home header shows "day N of life · X months Y days" and a "N-day recording streak" (a day without entries doesn't break the streak until the next day)
 - **Themes**: dark (default) / light / follow-system; every semantic color is a CSS variable, so native controls and charts re-skin together
 - **Material**: iOS-style frosted glass on floating surfaces (tab bar / sheets / dialogs / toast), gracefully falling back to opaque when `backdrop-filter` is unavailable or "Reduce Transparency" is on
@@ -62,7 +63,7 @@ src/
 └── pages/              # Today / History / Growth / Settings + onboarding
 ```
 
-Data model: `BabyProfile` / `Feed` / `Sleep` (`end=null` means in progress) / `Growth` / `Diaper` — see `src/types.ts`.
+Data model: `BabyProfile` / `Feed` / `Sleep` (`end=null` means in progress) / `Growth` / `Diaper` / `Temperature` / `MedCourse` + `MedDose` — see `src/types.ts`. The backup format is now `schemaVersion: 2`; v1 backups import with an automatic migration (health collections default to empty).
 
 ## Getting started
 

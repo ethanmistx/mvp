@@ -27,6 +27,11 @@ describe('generateStructuredSummary + buildInsightUserPrompt', () => {
       sleeps: [{ id: 's1', start: hoursAgo(3), end: hoursAgo(1) }],
       diapers: [{ id: 'd1', ts: hoursAgo(1), kind: 'wet' }],
       growths: [{ id: 'g1', date: '2026-06-09', weightKg: 7.3 }],
+      temperatures: [{ id: 't1', ts: hoursAgo(2), celsius: 38.2, site: 'ear' }],
+      medCourses: [
+        { id: 'c1', name: '头孢克肟', timesPerDay: 3, startDate: '2026-06-09', endDate: '2026-06-15' },
+      ],
+      medDoses: [{ id: 'm1', courseId: 'c1', ts: hoursAgo(1) }],
       now,
     })
     expect(summary.baby).toMatchObject({ name: '糖糖', sex: 'girl', ageMonths: 6, ageDaysInMonth: 0 })
@@ -37,6 +42,9 @@ describe('generateStructuredSummary + buildInsightUserPrompt', () => {
     expect(summary.growth.latestDate).toBe('2026-06-09')
     expect(summary.growth.whoBandDescriptions.length).toBe(1)
     expect(summary.growth.whoBandDescriptions[0]).not.toMatch(/诊断|疾病|预警/)
+    // v2:健康数据进入 LLM 输入
+    expect(summary.health.temps24h).toMatchObject({ count: 1, maxC: 38.2 })
+    expect(summary.health.meds[0]).toMatchObject({ name: '头孢克肟', todayCount: 1, timesPerDay: 3 })
 
     const prompt = buildInsightUserPrompt(summary)
     expect(prompt).toContain('"name": "糖糖"')
@@ -54,6 +62,9 @@ describe('generateStructuredSummary + buildInsightUserPrompt', () => {
         { id: 'g2', date: '2026-06-01', lengthCm: 66 }, // 无体重,应被跳过
         { id: 'g3', date: '2026-06-09', weightKg: 7.3 },
       ],
+      temperatures: [],
+      medCourses: [],
+      medDoses: [],
       now,
     })
     expect(summary.growth.weightDeltaKg).toBeCloseTo(0.5)

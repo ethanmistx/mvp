@@ -106,4 +106,32 @@ describe('App 冒烟', () => {
     fireEvent.click(screen.getByText('深色'))
     expect(document.documentElement.classList.contains('light')).toBe(false)
   })
+
+  it('健康区块:记体温 → 保存,最近体温与历史可见;新建疗程后可打卡', async () => {
+    await seedProfile()
+    render(<App />)
+    await screen.findByText('小测')
+
+    // 记体温(默认 36.8,直接保存)
+    fireEvent.click(screen.getByText(/记体温/))
+    await screen.findByText('体温记录')
+    fireEvent.click(screen.getByText('保存'))
+    await waitFor(() => expect(screen.queryByText('体温记录')).toBeNull())
+    await screen.findByText(/最近体温 36\.8 °C/)
+
+    // 新建疗程并打卡
+    fireEvent.click(screen.getByText(/用药疗程/))
+    await screen.findByText('用药疗程')
+    fireEvent.change(screen.getByPlaceholderText('如:头孢克肟'), { target: { value: '阿莫西林' } })
+    fireEvent.click(screen.getByText('保存'))
+    await screen.findByText(/阿莫西林/)
+    expect(screen.getByText(/今日 0\/3 次/)).toBeTruthy()
+    fireEvent.click(screen.getByText('记一次'))
+    await screen.findByText(/今日 1\/3 次/)
+
+    // 记录页能看到体温与服药条目
+    fireEvent.click(screen.getByText('记录'))
+    await screen.findByText(/体温 36\.8 °C/)
+    expect(screen.getByText(/服药 · 阿莫西林/)).toBeTruthy()
+  })
 })

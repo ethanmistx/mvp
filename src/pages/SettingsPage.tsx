@@ -89,6 +89,9 @@ export function SettingsPage({ profile }: { profile: BabyProfile }) {
         sleeps: bundle.sleeps,
         diapers: bundle.diapers,
         growths: bundle.growths,
+        temperatures: bundle.temperatures,
+        medCourses: bundle.medCourses,
+        medDoses: bundle.medDoses,
         now: new Date(),
       }),
     )

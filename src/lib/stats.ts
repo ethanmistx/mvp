@@ -75,17 +75,19 @@ export function findConflictingOngoing(sleeps: Sleep[], candidate: Sleep): Sleep
   return sleeps.find((s) => s.end === null && s.id !== candidate.id) ?? null
 }
 
-/** 收集所有有记录的日子(用于连续打卡统计) */
+/** 收集所有有记录的日子(用于连续打卡统计);extraTs 为体温/服药等附加事件时间 */
 export function collectRecordDays(
   feeds: Feed[],
   sleeps: Sleep[],
   diapers: Diaper[],
   growthDates: string[],
+  extraTs: string[] = [],
 ): Set<string> {
   const days = new Set<string>()
   for (const f of feeds) days.add(localDateStr(new Date(f.ts)))
   for (const s of sleeps) days.add(localDateStr(new Date(s.start)))
   for (const d of diapers) days.add(localDateStr(new Date(d.ts)))
   for (const g of growthDates) days.add(g)
+  for (const ts of extraTs) days.add(localDateStr(new Date(ts)))
   return days
 }

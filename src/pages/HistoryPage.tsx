@@ -1,11 +1,11 @@
 // 记录页:全部记录按日分组,点条目编辑,删除需二次确认。
 import { useMemo, useState } from 'react'
-import type { Diaper, Feed, Growth, Sleep } from '../types'
+import type { Diaper, Feed, Growth, MedCourse, MedDose, Sleep, Temperature } from '../types'
 import { useCollection, useNow } from '../hooks/useStore'
 import { formatMinutes, formatTime, localDateStr, parseLocalDate, sleepMinutes } from '../lib/dates'
-import { diaperKindIcons, diaperKindLabels, feedTypeLabels } from '../lib/labels'
+import { diaperKindIcons, diaperKindLabels, feedTypeLabels, tempSiteLabels } from '../lib/labels'
 import { ConfirmDialog, EmptyState } from '../components/ui'
-import { DiaperSheet, FeedSheet, GrowthSheet, SleepSheet } from '../components/editSheets'
+import { DiaperSheet, DoseSheet, FeedSheet, GrowthSheet, SleepSheet, TempSheet } from '../components/editSheets'
 import { pageMemory } from '../lib/pageMemory'
 
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
@@ -20,6 +20,8 @@ type Entry =
   | { kind: 'sleep'; ts: string; record: Sleep }
   | { kind: 'diaper'; ts: string; record: Diaper }
   | { kind: 'growth'; ts: string; record: Growth }
+  | { kind: 'temp'; ts: string; record: Temperature }
+  | { kind: 'dose'; ts: string; record: MedDose; courseName: string }
 
 function entryLabel(e: Entry, now: Date): { icon: string; text: string } {
   switch (e.kind) {
@@ -50,6 +52,14 @@ function entryLabel(e: Entry, now: Date): { icon: string; text: string } {
       if (g.headCm != null) parts.push(`头围 ${g.headCm} cm`)
       return { icon: '📏', text: parts.join(' · ') }
     }
+    case 'temp': {
+      const t = e.record
+      const site = t.site ? ` · ${tempSiteLabels[t.site]}` : ''
+      const anti = t.antipyretic ? ' · 用了退烧药' : ''
+      return { icon: '🌡️', text: `体温 ${t.celsius.toFixed(1)} °C${site}${anti}${t.note ? ` · ${t.note}` : ''}` }
+    }
+    case 'dose':
+      return { icon: '💊', text: `服药 · ${e.courseName}` }
   }
 }
 
@@ -59,6 +69,9 @@ export function HistoryPage() {
   const sleeps = useCollection<Sleep>('sleeps')
   const diapers = useCollection<Diaper>('diapers')
   const growths = useCollection<Growth>('growths')
+  const temps = useCollection<Temperature>('temperatures')
+  const courses = useCollection<MedCourse>('medCourses')
+  const doses = useCollection<MedDose>('medDoses')
 
   const [editing, setEditing] = useState<Entry | null>(null)
   const [deleting, setDeleting] = useState<Entry | null>(null)
@@ -73,10 +86,15 @@ export function HistoryPage() {
   }
 
   const groups = useMemo(() => {
+    const courseNames = new Map((courses.items ?? []).map((c) => [c.id, c.name]))
     const entries: Entry[] = [
       ...(feeds.items ?? []).map((r): Entry => ({ kind: 'feed', ts: r.ts, record: r })),
       ...(sleeps.items ?? []).map((r): Entry => ({ kind: 'sleep', ts: r.start, record: r })),
       ...(diapers.items ?? []).map((r): Entry => ({ kind: 'diaper', ts: r.ts, record: r })),
+      ...(temps.items ?? []).map((r): Entry => ({ kind: 'temp', ts: r.ts, record: r })),
+      ...(doses.items ?? []).map(
+        (r): Entry => ({ kind: 'dose', ts: r.ts, record: r, courseName: courseNames.get(r.courseId) ?? '未知疗程' }),
+      ),
       // 生长记录只有日期,排在当天最前
       ...(growths.items ?? []).map((r): Entry => ({ kind: 'growth', ts: `${r.date}T00:00:00`, record: r })),
     ]
@@ -88,7 +106,7 @@ export function HistoryPage() {
       byDay.get(day)!.push(e)
     }
     return [...byDay.entries()]
-  }, [feeds.items, sleeps.items, diapers.items, growths.items])
+  }, [feeds.items, sleeps.items, diapers.items, growths.items, temps.items, courses.items, doses.items])
 
   const doDelete = () => {
     if (!deleting) return
@@ -96,6 +114,8 @@ export function HistoryPage() {
     if (kind === 'feed') void feeds.remove(record.id)
     else if (kind === 'sleep') void sleeps.remove(record.id)
     else if (kind === 'diaper') void diapers.remove(record.id)
+    else if (kind === 'temp') void temps.remove(record.id)
+    else if (kind === 'dose') void doses.remove(record.id)
     else void growths.remove(record.id)
     setDeleting(null)
   }
@@ -167,6 +187,18 @@ export function HistoryPage() {
       )}
       {editing?.kind === 'growth' && (
         <GrowthSheet open initial={editing.record} onSave={(r) => void growths.put(r)} onClose={() => setEditing(null)} />
+      )}
+      {editing?.kind === 'temp' && (
+        <TempSheet open initial={editing.record} onSave={(r) => void temps.put(r)} onClose={() => setEditing(null)} />
+      )}
+      {editing?.kind === 'dose' && (
+        <DoseSheet
+          open
+          initial={editing.record}
+          courseName={editing.courseName}
+          onSave={(r) => void doses.put(r)}
+          onClose={() => setEditing(null)}
+        />
       )}
       <ConfirmDialog
         open={deleting !== null}

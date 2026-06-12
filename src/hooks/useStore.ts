@@ -17,7 +17,16 @@ export function notify(collection: CollectionName): void {
   listeners.get(collection)?.forEach((fn) => fn())
 }
 
-const ALL_COLLECTIONS: CollectionName[] = ['profile', 'feeds', 'sleeps', 'growths', 'diapers']
+const ALL_COLLECTIONS: CollectionName[] = [
+  'profile',
+  'feeds',
+  'sleeps',
+  'growths',
+  'diapers',
+  'temperatures',
+  'medCourses',
+  'medDoses',
+]
 
 /** 整体导入后全量刷新 */
 export function notifyAll(): void {

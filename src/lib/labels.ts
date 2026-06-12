@@ -1,5 +1,12 @@
 // 中文文案集中管理,UI 与摘要共用
-import type { DiaperKind, FeedType } from '../types'
+import type { DiaperKind, FeedType, TempSite } from '../types'
+
+export const tempSiteLabels: Record<TempSite, string> = {
+  armpit: '腋下',
+  ear: '耳温',
+  forehead: '额温',
+  rectal: '肛温',
+}
 
 export const feedTypeLabels: Record<FeedType, string> = {
   nurse: '亲喂',

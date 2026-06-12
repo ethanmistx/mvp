@@ -4,8 +4,10 @@
 //   generateStructuredSummary() 给 LLM 读的 JSON(AI 解读的输入)
 // 两者共享下方的窗口聚合函数,保证口径一致。
 
-import type { BabyProfile, Diaper, Feed, Growth, Sleep } from '../types'
-import { dayOfLife, formatMinutes, monthsAndDays, sleepMinutes } from './dates'
+import type { BabyProfile, Diaper, Feed, Growth, MedCourse, MedDose, Sleep, Temperature } from '../types'
+import { dayOfLife, formatMinutes, monthsAndDays, sleepMinutes, timeAgo } from './dates'
+import { aggregateTemps, activeCourses, courseAdherence, type TempAgg } from './health'
+import { tempSiteLabels } from './labels'
 import { describeMeasurement } from './who'
 import { ageInMonths } from './dates'
 
@@ -15,6 +17,9 @@ export interface SummaryInput {
   sleeps: Sleep[]
   diapers: Diaper[]
   growths: Growth[]
+  temperatures: Temperature[]
+  medCourses: MedCourse[]
+  medDoses: MedDose[]
   now: Date
 }
 
@@ -146,6 +151,30 @@ function diaperSection(diapers: Diaper[], now: Date, hours: number): string[] {
   return [`- 尿布:共 ${a.total} 次(尿湿 ${a.wet},便便 ${a.dirty},混合 ${a.mixed})`]
 }
 
+// 体温/用药只陈述事实数字,不出现"发烧/异常"等判断(红线)
+function tempSection(temps: Temperature[], now: Date, hours: number): string[] {
+  const a = aggregateTemps(temps, now, hours)
+  if (a.count === 0) return []
+  const site = a.latest?.site ? `,${tempSiteLabels[a.latest.site]}` : ''
+  const parts = [
+    `测温 ${a.count} 次`,
+    `最高 ${a.maxC} °C`,
+    `最近 ${a.latest!.celsius} °C(${timeAgo(a.latest!.ts, now)}${site})`,
+  ]
+  if (a.antipyreticCount > 0) parts.push(`用退烧药 ${a.antipyreticCount} 次`)
+  return [`- 体温:${parts.join(',')}`]
+}
+
+function medSection(courses: MedCourse[], doses: MedDose[], now: Date): string[] {
+  const active = activeCourses(courses, now)
+  if (active.length === 0) return []
+  return active.map((c) => {
+    const a = courseAdherence(c, doses, now)
+    const noteStr = c.note ? `(${c.note})` : ''
+    return `- 用药:${c.name}${noteStr},疗程第 ${a.dayOfCourse}/${a.totalDays} 天,今日 ${a.todayCount}/${c.timesPerDay} 次,近 7 天记录 ${a.recent7dActual} 次(疗程内应服约 ${a.recent7dExpected} 次)`
+  })
+}
+
 function growthSection(profile: BabyProfile, growths: Growth[]): string[] {
   const a = aggregateGrowth(profile, growths)
   if (!a.latest) return ['- 生长:暂无测量记录']
@@ -160,7 +189,7 @@ function growthSection(profile: BabyProfile, growths: Growth[]): string[] {
 }
 
 export function generateSummary(input: SummaryInput): string {
-  const { profile, feeds, sleeps, diapers, growths, now } = input
+  const { profile, feeds, sleeps, diapers, growths, temperatures, medCourses, medDoses, now } = input
   const { months, days } = monthsAndDays(profile.birthDate, now)
   const header = [
     `【宝宝记录摘要】生成于 ${now.toLocaleString('zh-CN')}`,
@@ -172,6 +201,7 @@ export function generateSummary(input: SummaryInput): string {
     ...feedSection(feeds, now, 24),
     ...sleepSection(sleeps, now, 24),
     ...diaperSection(diapers, now, 24),
+    ...tempSection(temperatures, now, 24),
     '',
   ]
   const d7 = [
@@ -179,6 +209,8 @@ export function generateSummary(input: SummaryInput): string {
     ...feedSection(feeds, now, 24 * 7),
     ...sleepSection(sleeps, now, 24 * 7),
     ...diaperSection(diapers, now, 24 * 7),
+    ...tempSection(temperatures, now, 24 * 7),
+    ...medSection(medCourses, medDoses, now),
     ...growthSection(profile, growths),
     '',
   ]
@@ -189,7 +221,7 @@ export function generateSummary(input: SummaryInput): string {
 // ---------- 结构化输出(LLM 输入) ----------
 
 export interface StructuredSummary {
-  schemaVersion: 1
+  schemaVersion: 2
   generatedAt: string
   baby: {
     name: string
@@ -208,10 +240,25 @@ export interface StructuredSummary {
     weightDeltaKg: number | null
     prevWeightDate: string | null
   }
+  health: {
+    temps24h: TempAgg
+    temps7d: TempAgg
+    /** 进行中疗程的依从情况(只含事实数字) */
+    meds: Array<{
+      name: string
+      note?: string
+      timesPerDay: number
+      dayOfCourse: number
+      totalDays: number
+      todayCount: number
+      recent7dActual: number
+      recent7dExpected: number
+    }>
+  }
 }
 
 export function generateStructuredSummary(input: SummaryInput): StructuredSummary {
-  const { profile, feeds, sleeps, diapers, growths, now } = input
+  const { profile, feeds, sleeps, diapers, growths, temperatures, medCourses, medDoses, now } = input
   const { months, days } = monthsAndDays(profile.birthDate, now)
   const g = aggregateGrowth(profile, growths)
   const windowAgg = (hours: number) => ({
@@ -220,7 +267,7 @@ export function generateStructuredSummary(input: SummaryInput): StructuredSummar
     diapers: aggregateDiapers(diapers, now, hours),
   })
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generatedAt: now.toISOString(),
     baby: {
       name: profile.name,
@@ -240,6 +287,23 @@ export function generateStructuredSummary(input: SummaryInput): StructuredSummar
       whoBandDescriptions: g.descriptions,
       weightDeltaKg: g.weightDeltaKg,
       prevWeightDate: g.prevWeightDate,
+    },
+    health: {
+      temps24h: aggregateTemps(temperatures, now, 24),
+      temps7d: aggregateTemps(temperatures, now, 24 * 7),
+      meds: activeCourses(medCourses, now).map((c) => {
+        const a = courseAdherence(c, medDoses, now)
+        return {
+          name: c.name,
+          note: c.note,
+          timesPerDay: c.timesPerDay,
+          dayOfCourse: a.dayOfCourse,
+          totalDays: a.totalDays,
+          todayCount: a.todayCount,
+          recent7dActual: a.recent7dActual,
+          recent7dExpected: a.recent7dExpected,
+        }
+      }),
     },
   }
 }

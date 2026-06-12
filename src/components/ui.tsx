@@ -88,6 +88,7 @@ export function Stepper({
   min = 0,
   unit,
   presets = [],
+  format,
 }: {
   value: number
   onChange: (v: number) => void
@@ -95,6 +96,8 @@ export function Stepper({
   min?: number
   unit: string
   presets?: number[]
+  /** 显示格式化(如体温固定一位小数);默认原样 */
+  format?: (v: number) => string
 }) {
   return (
     <div>
@@ -107,7 +110,7 @@ export function Stepper({
           −
         </button>
         <div className="min-w-[7rem] text-center">
-          <span className="text-4xl font-bold tabular-nums">{value}</span>
+          <span className="text-4xl font-bold tabular-nums">{format ? format(value) : value}</span>
           <span className="text-night-dim ml-1">{unit}</span>
         </div>
         <button

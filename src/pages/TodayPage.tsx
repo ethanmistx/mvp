@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
-import type { BabyProfile, Diaper, Feed, Growth, Sleep } from '../types'
+import type { BabyProfile, Diaper, Feed, Growth, MedDose, Sleep, Temperature } from '../types'
 import { useCollection, useNow } from '../hooks/useStore'
 import { dayOfLife, monthsAndDays, streakDays } from '../lib/dates'
 import { collectRecordDays } from '../lib/stats'
 import { FeedSection } from '../components/FeedSection'
 import { SleepSection } from '../components/SleepSection'
 import { DiaperSection } from '../components/DiaperSection'
+import { HealthSection } from '../components/HealthSection'
 
 export function TodayPage({ profile }: { profile: BabyProfile }) {
   const now = useNow(60_000)
@@ -13,6 +14,8 @@ export function TodayPage({ profile }: { profile: BabyProfile }) {
   const { items: sleeps } = useCollection<Sleep>('sleeps')
   const { items: diapers } = useCollection<Diaper>('diapers')
   const { items: growths } = useCollection<Growth>('growths')
+  const { items: temps } = useCollection<Temperature>('temperatures')
+  const { items: doses } = useCollection<MedDose>('medDoses')
 
   const { months, days } = monthsAndDays(profile.birthDate, now)
   const streak = useMemo(() => {
@@ -21,9 +24,10 @@ export function TodayPage({ profile }: { profile: BabyProfile }) {
       sleeps ?? [],
       diapers ?? [],
       (growths ?? []).map((g) => g.date),
+      [...(temps ?? []).map((t) => t.ts), ...(doses ?? []).map((d) => d.ts)],
     )
     return streakDays(recordDays, now)
-  }, [feeds, sleeps, diapers, growths, now])
+  }, [feeds, sleeps, diapers, growths, temps, doses, now])
 
   return (
     <div className="page">
@@ -41,6 +45,7 @@ export function TodayPage({ profile }: { profile: BabyProfile }) {
       <FeedSection />
       <SleepSection />
       <DiaperSection />
+      <HealthSection />
     </div>
   )
 }
