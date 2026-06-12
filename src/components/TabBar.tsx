@@ -9,7 +9,7 @@ const tabs: Array<{ id: Tab; icon: string; label: string }> = [
 
 export function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
   return (
-    <nav className="fixed bottom-0 inset-x-0 bg-night-card border-t border-night-line pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed bottom-0 inset-x-0 glass border-t border-night-line/60 pb-[env(safe-area-inset-bottom)]">
       <div className="flex max-w-md mx-auto">
         {tabs.map((t) => (
           <button

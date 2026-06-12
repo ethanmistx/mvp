@@ -34,6 +34,7 @@ Dark is the default (built for night feeds); a light theme and follow-system mod
 - **Growth curves**: weight / length / head circumference; WHO 2006 P3 / P50 / P97 reference lines (sex-specific) plus the baby's own points, x-axis in months of age; the latest measurement gets a plain-language band description
 - **Retention**: the home header shows "day N of life · X months Y days" and a "N-day recording streak" (a day without entries doesn't break the streak until the next day)
 - **Themes**: dark (default) / light / follow-system; every semantic color is a CSS variable, so native controls and charts re-skin together
+- **Material**: iOS-style frosted glass on floating surfaces (tab bar / sheets / dialogs / toast), gracefully falling back to opaque when `backdrop-filter` is unavailable or "Reduce Transparency" is on
 - **Data sovereignty**: one-tap export / import of a complete JSON backup (strictly validated, double-confirmed); a "generate summary" button produces a structured 24h/7d text digest you can hand to a doctor or paste into any AI
 - **AI insights (optional)**: call an LLM with your own key to get a restrained interpretation of recent records
 - Every record supports edit and delete; deletion always asks for confirmation

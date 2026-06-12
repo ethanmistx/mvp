@@ -16,9 +16,9 @@ export function Sheet({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
       <div className="absolute inset-0 bg-black/60 animate-fade-in" onClick={onClose} />
-      <div className="sheet-panel relative w-full max-w-md bg-night-card rounded-t-3xl px-5 pb-8 overflow-y-auto animate-sheet-in">
-        {/* 拖拽把手视觉示意 */}
-        <div className="sticky top-0 bg-night-card pt-2.5 pb-1 -mx-5 px-5">
+      <div className="sheet-panel relative w-full max-w-md glass-strong rounded-t-3xl px-5 pb-8 overflow-y-auto animate-sheet-in">
+        {/* 拖拽把手视觉示意;吸顶头部同为毛玻璃,内容滚过时透出模糊 */}
+        <div className="sticky top-0 glass rounded-none pt-2.5 pb-1 -mx-5 px-5">
           <div className="mx-auto w-9 h-1 rounded-full bg-night-line" />
           <div className="flex items-center justify-between mt-2">
             <h2 className="text-lg font-semibold">{title}</h2>
@@ -59,7 +59,7 @@ export function ConfirmDialog({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
       <div className="absolute inset-0 bg-black/70 animate-fade-in" onClick={onCancel} />
-      <div className="relative w-full max-w-xs card p-5 animate-scale-in">
+      <div className="relative w-full max-w-xs glass-strong rounded-2xl p-5 animate-scale-in">
         <p className="font-semibold mb-1">{title}</p>
         {message && <p className="text-sm text-night-dim mb-4">{message}</p>}
         <div className="flex gap-3 mt-3">

@@ -101,6 +101,48 @@ body {
   .spinner {
     @apply inline-block w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin align-[-2px];
   }
+
+  /* iOS 风格毛玻璃材质:用于悬浮层(Tab 栏/弹层/对话框/Toast)。
+     不支持 backdrop-filter 的环境自动退回不透明卡片色。 */
+  .glass,
+  .glass-strong {
+    @apply bg-night-card;
+  }
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass {
+      @apply bg-night-card/70;
+      -webkit-backdrop-filter: saturate(160%) blur(20px);
+      backdrop-filter: saturate(160%) blur(20px);
+    }
+    /* 弹层/对话框位于压暗层之上,需要更高不透明度避免发灰(尤其浅色主题) */
+    .glass-strong {
+      @apply bg-night-card/85;
+      -webkit-backdrop-filter: saturate(160%) blur(24px);
+      backdrop-filter: saturate(160%) blur(24px);
+    }
+  }
+  /* 系统开了「降低透明度」则回到不透明 */
+  @media (prefers-reduced-transparency: reduce) {
+    .glass,
+    .glass-strong {
+      @apply bg-night-card;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+}
+
+/* 极淡的环境光晕(暖色 + 睡眠蓝),给毛玻璃表面提供可感知的底色变化;
+   不可交互、置于所有内容之下 */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(420px 320px at 88% -8%, rgb(var(--c-warm) / 0.07), transparent 70%),
+    radial-gradient(480px 360px at -10% 32%, rgb(var(--c-sleep-ring) / 0.05), transparent 70%);
 }
 
 /* 进场动效:克制、短促;尊重系统减弱动态偏好 */

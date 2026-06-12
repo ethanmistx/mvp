@@ -28,7 +28,7 @@ export function Toaster() {
   if (!text) return null
   return (
     <div className="fixed inset-x-0 bottom-24 z-[70] flex justify-center pointer-events-none">
-      <div className="animate-scale-in bg-night-line/95 text-night-text text-sm rounded-full px-4 py-2.5 shadow-lg">
+      <div className="animate-scale-in glass border border-night-line/50 text-night-text text-sm rounded-full px-4 py-2.5 shadow-lg">
         {text}
       </div>
     </div>
