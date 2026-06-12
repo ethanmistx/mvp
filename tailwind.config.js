@@ -4,19 +4,38 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 深色暖夜配色:stone 底 + amber 强调,深夜单手使用不刺眼
+        // 语义色全部走 CSS 变量(src/index.css 定义深/浅两套),
+        // html.light 时整体切换;`night.*` 命名保留为「表面层级」语义:
+        // bg=页面底 / card=卡片 / line=分隔与次按钮 / dim=次要文字 / text=正文
         night: {
-          bg: '#1c1917',
-          card: '#292524',
-          line: '#44403c',
-          dim: '#b0a9a3',
-          text: '#e7e5e4',
+          bg: 'rgb(var(--c-bg) / <alpha-value>)',
+          card: 'rgb(var(--c-card) / <alpha-value>)',
+          line: 'rgb(var(--c-line) / <alpha-value>)',
+          dim: 'rgb(var(--c-dim) / <alpha-value>)',
+          text: 'rgb(var(--c-text) / <alpha-value>)',
         },
         warm: {
-          // amber-500:比 amber-400 暗一档,降低深夜大面积主按钮的眩光
-          DEFAULT: '#f59e0b',
-          soft: '#fcd34d',
-          deep: '#b45309',
+          DEFAULT: 'rgb(var(--c-warm) / <alpha-value>)',
+          soft: 'rgb(var(--c-warm-soft) / <alpha-value>)',
+          deep: 'rgb(var(--c-warm-deep) / <alpha-value>)',
+        },
+        // 睡眠进行中(冷色,与暖色操作区分)
+        sleep: {
+          bg: 'rgb(var(--c-sleep-bg) / <alpha-value>)',
+          ring: 'rgb(var(--c-sleep-ring) / <alpha-value>)',
+          text: 'rgb(var(--c-sleep-text) / <alpha-value>)',
+          sub: 'rgb(var(--c-sleep-sub) / <alpha-value>)',
+        },
+        // 一键记录成功反馈
+        success: {
+          bg: 'rgb(var(--c-success-bg) / <alpha-value>)',
+          text: 'rgb(var(--c-success-text) / <alpha-value>)',
+        },
+        // 错误文字与危险按钮
+        danger: {
+          DEFAULT: 'rgb(var(--c-danger) / <alpha-value>)',
+          bg: 'rgb(var(--c-danger-bg) / <alpha-value>)',
+          soft: 'rgb(var(--c-danger-soft) / <alpha-value>)',
         },
       },
     },

@@ -170,7 +170,7 @@ export function AiInsightSection() {
         </button>
       </div>
 
-      {error && <p className="text-xs text-red-300 mt-3">{error}</p>}
+      {error && <p className="text-xs text-danger mt-3">{error}</p>}
 
       {insight && (
         <div className="mt-3">

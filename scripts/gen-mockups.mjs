@@ -10,24 +10,25 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 const OUT = new URL('../docs/mockups', import.meta.url).pathname
 mkdirSync(OUT, { recursive: true })
 
-// 设计 token(与 tailwind.config.js 一致)
-const C = {
-  bg: '#1c1917',
-  card: '#292524',
-  line: '#44403c',
-  dim: '#b0a9a3',
-  text: '#e7e5e4',
-  warm: '#f59e0b',
-  warmSoft: '#fcd34d',
-  gold: '#fbbf24',
-  ink: '#1c1917',
-  indigoBg: '#1e1b4b',
-  indigoRing: '#818cf8',
-  indigoText: '#c7d2fe',
-  indigoDim: '#a5b4fc',
-  red: '#fca5a5',
-  stone500: '#78716c',
+// 设计 token(与 tailwind.config.js / src/index.css 的两套 CSS 变量一致)
+const PALETTES = {
+  dark: {
+    bg: '#1c1917', card: '#292524', line: '#44403c', dim: '#b0a9a3', text: '#e7e5e4',
+    warm: '#f59e0b', warmSoft: '#fcd34d', gold: '#fbbf24', ink: '#1c1917',
+    indigoBg: '#1e1b4b', indigoRing: '#818cf8', indigoText: '#c7d2fe', indigoDim: '#a5b4fc',
+    red: '#fca5a5', stone500: '#78716c',
+    cardStroke: null, successBg: '#064e3b', successFg: '#a7f3d0', overlayOp: 0.6,
+  },
+  light: {
+    bg: '#fafaf9', card: '#ffffff', line: '#e7e5e4', dim: '#78716c', text: '#292524',
+    warm: '#d97706', warmSoft: '#b45309', gold: '#d97706', ink: '#ffffff',
+    indigoBg: '#e0e7ff', indigoRing: '#818cf8', indigoText: '#312e81', indigoDim: '#4f46e5',
+    red: '#dc2626', stone500: '#a8a29e',
+    cardStroke: '#e7e5e4', successBg: '#d1fae5', successFg: '#047857', overlayOp: 0.45,
+  },
 }
+const C = { ...PALETTES.dark }
+
 const FONT = 'WenQuanYi Zen Hei'
 const W = 390
 const M = 16 // 页面左右边距
@@ -157,8 +158,8 @@ function primaryBtn(x, y, w, h, label, size = 16) {
 }
 
 function iconBtn(x, y, w, h, icon, label, { active = false } = {}) {
-  const bg = active ? '#064e3b' : C.line
-  const fg = active ? '#a7f3d0' : C.text
+  const bg = active ? C.successBg : C.line
+  const fg = active ? C.successFg : C.text
   return [
     rr(x, y, w, h, 14, bg),
     icon(x + w / 2 - 11, y + 10, fg),
@@ -181,7 +182,7 @@ function input(x, y, w, h, value, { placeholder = false, label } = {}) {
 // ---------- 今日页 ----------
 function feedCard(y, sleeping = false) {
   const x = M, w = W - 2 * M
-  const parts = [rr(x, y, w, h_feed, 16, C.card), cardHead(x, y, w, '喂养', '今日 5 次 · 480 ml · 亲喂 25 分')]
+  const parts = [rr(x, y, w, h_feed, 16, C.card, C.cardStroke, 1), cardHead(x, y, w, '喂养', '今日 5 次 · 480 ml · 亲喂 25 分')]
   const bw = (w - 32 - 24) / 4
   const labels = [
     ['亲喂', icons.heart],
@@ -199,7 +200,7 @@ const h_feed = 148
 
 function sleepCard(y, ongoing) {
   const x = M, w = W - 2 * M, h = 178
-  const parts = [rr(x, y, w, h, 16, C.card), cardHead(x, y, w, '睡眠', ongoing ? '今日 3 小时 12 分 · 2 段' : '今日 4 小时 35 分 · 3 段 · 最长 2 小时')]
+  const parts = [rr(x, y, w, h, 16, C.card, C.cardStroke, 1), cardHead(x, y, w, '睡眠', ongoing ? '今日 3 小时 12 分 · 2 段' : '今日 4 小时 35 分 · 3 段 · 最长 2 小时')]
   if (ongoing) {
     parts.push(rr(x + 16, y + 42, w - 32, 76, 16, C.indigoBg, C.indigoRing, 1.2))
     parts.push(icons.zzz(x + w / 2 - 78, y + 60, C.indigoText))
@@ -218,7 +219,7 @@ function sleepCard(y, ongoing) {
 
 function diaperCard(y, saved = -1) {
   const x = M, w = W - 2 * M, h = 142
-  const parts = [rr(x, y, w, h, 16, C.card), cardHead(x, y, w, '换尿布', '今日 6 次(湿 4 · 便 1 · 混 1)')]
+  const parts = [rr(x, y, w, h, 16, C.card, C.cardStroke, 1), cardHead(x, y, w, '换尿布', '今日 6 次(湿 4 · 便 1 · 混 1)')]
   const bw = (w - 32 - 16) / 3
   const items = [
     ['尿湿', icons.drop],
@@ -248,8 +249,8 @@ function todayContent(sleeping) {
 function feedSheet() {
   const top = 236, x = 0, w = W
   const parts = []
-  parts.push(`<rect width="${W}" height="844" fill="#000" fill-opacity="0.6"/>`)
-  parts.push(`<path d="M${x} ${top + 24} A24 24 0 0 1 ${x + 24} ${top} H${w - 24} A24 24 0 0 1 ${w} ${top + 24} V844 H0 Z" fill="${C.card}"/>`)
+  parts.push(`<rect width="${W}" height="844" fill="#000" fill-opacity="${C.overlayOp}"/>`)
+  parts.push(`<path d="M${x} ${top + 24} A24 24 0 0 1 ${x + 24} ${top} H${w - 24} A24 24 0 0 1 ${w} ${top + 24} V844 H0 Z" fill="${C.card}"${C.cardStroke ? ` stroke="${C.cardStroke}"` : ''}/>`)
   parts.push(rr(W / 2 - 18, top + 10, 36, 4, 2, C.line))
   parts.push(t(20, top + 44, '喂养记录', { size: 18, bold: true }))
   parts.push(t(W - 28, top + 43, '✕', { size: 16, fill: C.dim }))
@@ -308,7 +309,7 @@ function historyContent() {
   let y = 108
   parts.push(t(x + 4, y + 8, '今天 · 2026-06-12', { size: 12, fill: C.dim }))
   y += 18
-  parts.push(rr(x, y, w, 54 * 4 + 2, 16, C.card))
+  parts.push(rr(x, y, w, 54 * 4 + 2, 16, C.card, C.cardStroke, 1))
   parts.push(historyRow(x, y + 1, w, icons.glass, '配方奶 120 ml', '02:31'))
   parts.push(historyRow(x, y + 55, w, icons.moon, '睡眠 7 小时 30 分(21:40–05:10)', '21:40'))
   parts.push(historyRow(x, y + 109, w, icons.drop, '尿布 · 尿湿', '01:12'))
@@ -316,12 +317,12 @@ function historyContent() {
   y += 54 * 4 + 18
   parts.push(t(x + 4, y + 8, '2026-06-11 周四', { size: 12, fill: C.dim }))
   y += 18
-  parts.push(rr(x, y, w, 54 * 3 + 2, 16, C.card))
+  parts.push(rr(x, y, w, 54 * 3 + 2, 16, C.card, C.cardStroke, 1))
   parts.push(historyRow(x, y + 1, w, icons.ruler, '体重 7.5 kg · 身长 68 cm', ''))
   parts.push(historyRow(x, y + 55, w, icons.poop, '尿布 · 便便', '20:18'))
   parts.push(historyRow(x, y + 109, w, icons.glass, '配方奶 150 ml', '19:02', true))
   y += 54 * 3 + 16
-  parts.push(rr(x, y, w, 46, 14, C.card))
+  parts.push(rr(x, y, w, 46, 14, C.card, C.cardStroke, 1))
   parts.push(t(x + w / 2, y + 29, '加载更早的记录(还有 21 天)', { size: 12.5, fill: C.dim, anchor: 'middle' }))
   return parts.join('')
 }
@@ -347,7 +348,7 @@ function growthContent() {
   })
   y += 56
   const ch = 264
-  parts.push(rr(x, y, w, ch + 36, 16, C.card))
+  parts.push(rr(x, y, w, ch + 36, 16, C.card, C.cardStroke, 1))
   // 绘图区
   const px = x + 38, pw = w - 54, py = y + 16, ph = ch - 14
   const X = (mo) => px + (mo / 24) * pw
@@ -371,7 +372,7 @@ function growthContent() {
   y += ch + 36 + 10
   parts.push(t(x + 4, y + 6, '虚线为 P3/P97,实线为 P50(男童标准);金色为糖糖的记录', { size: 10.5, fill: C.dim }))
   y += 18
-  parts.push(rr(x, y, w, 88, 16, C.card))
+  parts.push(rr(x, y, w, 88, 16, C.card, C.cardStroke, 1))
   parts.push(rr(x, y, 2.5, 88, 1.2, C.warm, null, 0, 0.65))
   parts.push(t(x + 16, y + 22, '最近一次测量(2026-06-09)', { size: 11, fill: C.dim }))
   parts.push(t(x + 16, y + 44, '体重 8.5 kg,位于 P50–P97 之间,在同月龄常见', { size: 13 }))
@@ -391,7 +392,7 @@ function settingsContent(H) {
   let y = 104
 
   // 宝宝档案
-  parts.push(rr(x, y, w, 332, 16, C.card))
+  parts.push(rr(x, y, w, 332, 16, C.card, C.cardStroke, 1))
   parts.push(icons.baby(x + 14, y + 12, C.warm, 0.9))
   parts.push(t(x + 40, y + 27, '宝宝档案', { size: 15, bold: true }))
   let iy = y + 44
@@ -412,7 +413,7 @@ function settingsContent(H) {
   y += 332 + 12
 
   // 数据摘要
-  parts.push(rr(x, y, w, 130, 16, C.card))
+  parts.push(rr(x, y, w, 130, 16, C.card, C.cardStroke, 1))
   parts.push(icons.doc(x + 14, y + 12, C.warm, 0.9))
   parts.push(t(x + 40, y + 27, '数据摘要', { size: 15, bold: true }))
   parts.push(t(x + 16, y + 52, '生成最近 24 小时 / 7 天的结构化文字,可复制后发给', { size: 11, fill: C.dim }))
@@ -421,7 +422,7 @@ function settingsContent(H) {
   y += 130 + 12
 
   // AI 解读
-  parts.push(rr(x, y, w, 414, 16, C.card))
+  parts.push(rr(x, y, w, 414, 16, C.card, C.cardStroke, 1))
   parts.push(icons.bot(x + 14, y + 12, C.warm, 0.9))
   parts.push(t(x + 40, y + 27, 'AI 解读', { size: 15, bold: true }))
   parts.push(t(x + 16, y + 52, '用你自己的大模型 API Key 解读最近记录。Key 只保存', { size: 11, fill: C.dim }))
@@ -447,7 +448,7 @@ function settingsContent(H) {
   y += 414 + 12
 
   // 数据备份
-  parts.push(rr(x, y, w, 132, 16, C.card))
+  parts.push(rr(x, y, w, 132, 16, C.card, C.cardStroke, 1))
   parts.push(icons.save(x + 14, y + 12, C.warm, 0.9))
   parts.push(t(x + 40, y + 27, '数据备份', { size: 15, bold: true }))
   parts.push(t(x + 16, y + 52, '所有数据只保存在本机浏览器里,不上传任何服务器。', { size: 11, fill: C.dim }))
@@ -469,10 +470,14 @@ function render(name, svg) {
   console.log(`${name}.png`)
 }
 
-render('01-today', frame(844, 'today', todayContent(false)))
-render('02-today-sleeping', frame(844, 'today', todayContent(true)))
-render('03-sheet-feed', frame(844, 'today', todayContent(false), feedSheet()))
-render('04-history', frame(844, 'history', historyContent()))
-render('05-growth', frame(844, 'growth', growthContent()))
-render('06-settings', frame(1320, 'settings', settingsContent(1320)))
+for (const theme of ['dark', 'light']) {
+  Object.assign(C, PALETTES[theme])
+  const p = theme === 'light' ? 'light-' : ''
+  render(`${p}01-today`, frame(844, 'today', todayContent(false)))
+  render(`${p}02-today-sleeping`, frame(844, 'today', todayContent(true)))
+  render(`${p}03-sheet-feed`, frame(844, 'today', todayContent(false), feedSheet()))
+  render(`${p}04-history`, frame(844, 'history', historyContent()))
+  render(`${p}05-growth`, frame(844, 'growth', growthContent()))
+  render(`${p}06-settings`, frame(1320, 'settings', settingsContent(1320)))
+}
 console.log('all done →', OUT)

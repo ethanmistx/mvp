@@ -32,7 +32,7 @@ export function DiaperSection() {
           <button
             key={k}
             className={`btn-big py-4 flex flex-col items-center gap-1 transition-colors ${
-              justSaved === k ? 'bg-emerald-900 text-emerald-200' : 'bg-night-line'
+              justSaved === k ? 'bg-success-bg text-success-text' : 'bg-night-line'
             }`}
             onClick={() => record(k)}
           >

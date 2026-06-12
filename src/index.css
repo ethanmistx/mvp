@@ -2,8 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 主题变量:默认深色暖夜(产品主场景是深夜单手),html.light 切换浅色。
+   RGB 三元组形式以支持 Tailwind 的透明度修饰(bg-warm/10 等)。 */
+:root {
+  --c-bg: 28 25 23; /* stone-900 暖 */
+  --c-card: 41 37 36;
+  --c-line: 68 64 60;
+  --c-dim: 176 169 163;
+  --c-text: 231 229 228;
+  --c-warm: 245 158 11; /* amber-500,降一档亮度防深夜眩光 */
+  --c-warm-soft: 252 211 77;
+  --c-warm-deep: 180 83 9;
+  --c-sleep-bg: 30 27 75; /* indigo-950 */
+  --c-sleep-ring: 129 140 248;
+  --c-sleep-text: 224 231 255;
+  --c-sleep-sub: 165 180 252;
+  --c-success-bg: 6 78 59; /* emerald-900 */
+  --c-success-text: 167 243 208;
+  --c-danger: 252 165 165; /* red-300,深底上对比更高 */
+  --c-danger-bg: 127 29 29;
+  --c-danger-soft: 254 202 202;
+}
+
+html.light {
+  color-scheme: light;
+  --c-bg: 250 250 249; /* stone-50 */
+  --c-card: 255 255 255;
+  --c-line: 231 229 228; /* stone-200 */
+  --c-dim: 120 113 108; /* stone-500 */
+  --c-text: 41 37 36; /* stone-800 */
+  --c-warm: 217 119 6; /* amber-600,浅底上保证对比 */
+  --c-warm-soft: 245 158 11;
+  --c-warm-deep: 146 64 14;
+  --c-sleep-bg: 224 231 255; /* indigo-100 */
+  --c-sleep-ring: 129 140 248;
+  --c-sleep-text: 49 46 129; /* indigo-900 */
+  --c-sleep-sub: 79 70 229; /* indigo-600 */
+  --c-success-bg: 209 250 229; /* emerald-100 */
+  --c-success-text: 4 120 87; /* emerald-700 */
+  --c-danger: 220 38 38; /* red-600 */
+  --c-danger-bg: 220 38 38;
+  --c-danger-soft: 254 226 226;
+}
+
 html {
-  /* 全局深色:原生日期/时间选择器、滚动条、选区都跟随深色 */
+  /* 原生日期/时间选择器、滚动条、选区跟随主题 */
   color-scheme: dark;
   /* 深夜单手使用:消除双击缩放延迟(不禁用捏合缩放,保留可访问性) */
   touch-action: manipulation;

@@ -14,7 +14,7 @@ const AMOUNT_PRESETS = [60, 90, 120, 150]
 
 function ErrorText({ message }: { message: string | null }) {
   if (!message) return null
-  return <p className="text-sm text-red-300 mb-3">{message}</p>
+  return <p className="text-sm text-danger mb-3">{message}</p>
 }
 
 /** 时间输入 + 「现在」快捷键:深夜补记时少敲一次原生选择器 */

@@ -23,6 +23,13 @@ import {
 } from '../lib/who'
 import { newId } from '../lib/id'
 import { pageMemory } from '../lib/pageMemory'
+import { useResolvedTheme } from '../hooks/useTheme'
+
+// recharts 需要具体色值,按当前主题取(其余 UI 由 CSS 变量自动切换)
+const chartColors = {
+  dark: { grid: '#44403c', tick: '#a8a29e', ref: '#78716c', p50: '#a8a29e', baby: '#fbbf24', tooltipBg: '#292524' },
+  light: { grid: '#e7e5e4', tick: '#78716c', ref: '#a8a29e', p50: '#78716c', baby: '#d97706', tooltipBg: '#ffffff' },
+} as const
 import { ConfirmDialog, EmptyState, Segmented } from '../components/ui'
 import { GrowthSheet } from '../components/editSheets'
 
@@ -70,6 +77,8 @@ export function GrowthPage({ profile }: { profile: BabyProfile }) {
   const hasRefAtCurrentAge =
     whoPercentilesAt(profile.sex, metric, ageInMonths(profile.birthDate, localDateStr(new Date()))) !== null
 
+  const cc = chartColors[useResolvedTheme()]
+
   return (
     <div className="page">
       <h1 className="page-title">生长曲线</h1>
@@ -79,34 +88,34 @@ export function GrowthPage({ profile }: { profile: BabyProfile }) {
       <div className="card" style={{ height: 320 }}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
-            <CartesianGrid stroke="#44403c" strokeDasharray="3 3" />
+            <CartesianGrid stroke={cc.grid} strokeDasharray="3 3" />
             <XAxis
               dataKey="month"
               type="number"
               domain={[0, 24]}
               ticks={[0, 3, 6, 9, 12, 15, 18, 21, 24]}
-              tick={{ fill: '#a8a29e', fontSize: 11 }}
-              label={{ value: '月龄', position: 'insideBottomRight', fill: '#a8a29e', fontSize: 11, dy: -4 }}
+              tick={{ fill: cc.tick, fontSize: 11 }}
+              label={{ value: '月龄', position: 'insideBottomRight', fill: cc.tick, fontSize: 11, dy: -4 }}
             />
-            <YAxis domain={['auto', 'auto']} tick={{ fill: '#a8a29e', fontSize: 11 }} />
+            <YAxis domain={['auto', 'auto']} tick={{ fill: cc.tick, fontSize: 11 }} />
             <Tooltip
-              contentStyle={{ background: '#292524', border: '1px solid #44403c', borderRadius: 12 }}
+              contentStyle={{ background: cc.tooltipBg, border: `1px solid ${cc.grid}`, borderRadius: 12 }}
               labelFormatter={(m) => `${Number(m).toFixed(1)} 月龄`}
               formatter={(value, name) => [
                 `${Number(value).toFixed(1)} ${metricUnit(metric)}`,
                 name === 'baby' ? profile.name : String(name).toUpperCase(),
               ]}
             />
-            <Line type="monotone" dataKey="p97" stroke="#78716c" strokeDasharray="4 4" dot={false} connectNulls />
-            <Line type="monotone" dataKey="p50" stroke="#a8a29e" dot={false} connectNulls />
-            <Line type="monotone" dataKey="p3" stroke="#78716c" strokeDasharray="4 4" dot={false} connectNulls />
+            <Line type="monotone" dataKey="p97" stroke={cc.ref} strokeDasharray="4 4" dot={false} connectNulls />
+            <Line type="monotone" dataKey="p50" stroke={cc.p50} dot={false} connectNulls />
+            <Line type="monotone" dataKey="p3" stroke={cc.ref} strokeDasharray="4 4" dot={false} connectNulls />
             <Line
               type="monotone"
               dataKey="baby"
-              stroke="#fbbf24"
+              stroke={cc.baby}
               strokeWidth={2}
               connectNulls
-              dot={{ r: 4, fill: '#fbbf24' }}
+              dot={{ r: 4, fill: cc.baby }}
             />
           </ComposedChart>
         </ResponsiveContainer>

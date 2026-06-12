@@ -8,9 +8,11 @@ import { parseBundle } from '../lib/backup'
 import { generateSummary } from '../lib/summary'
 import { ConfirmDialog, Field, Segmented, inputCls } from '../components/ui'
 import { AiInsightSection } from '../components/AiInsightSection'
+import { useThemePref } from '../hooks/useTheme'
 
 export function SettingsPage({ profile }: { profile: BabyProfile }) {
   const { saveProfile } = useProfile()
+  const [themePref, setThemePref] = useThemePref()
   const [name, setName] = useState(profile.name)
   const [birthDate, setBirthDate] = useState(profile.birthDate)
   const [sex, setSex] = useState<Sex>(profile.sex)
@@ -133,7 +135,7 @@ export function SettingsPage({ profile }: { profile: BabyProfile }) {
           />
         </Field>
         {!birthDateValid && (
-          <p className="text-sm text-red-300 mb-3">出生日期不能晚于今天。</p>
+          <p className="text-sm text-danger mb-3">出生日期不能晚于今天。</p>
         )}
         <button
           className="btn-primary w-full py-3"
@@ -142,6 +144,20 @@ export function SettingsPage({ profile }: { profile: BabyProfile }) {
         >
           {savedTip ? '已保存 ✓' : '保存档案'}
         </button>
+      </section>
+
+      <section className="card">
+        <h2 className="font-semibold mb-3">🎨 外观</h2>
+        <Segmented
+          options={[
+            { value: 'dark', label: '深色' },
+            { value: 'light', label: '浅色' },
+            { value: 'system', label: '跟随系统' },
+          ]}
+          value={themePref}
+          onChange={setThemePref}
+        />
+        <p className="text-xs text-night-dim mt-3">深色为默认,适合深夜喂养;浅色适合白天查看。</p>
       </section>
 
       <section className="card">

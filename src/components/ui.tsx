@@ -68,7 +68,7 @@ export function ConfirmDialog({
           </button>
           <button
             className={`btn-big flex-1 py-3 ${
-              tone === 'danger' ? 'bg-red-900/80 text-red-200' : 'bg-warm text-night-bg'
+              tone === 'danger' ? 'bg-danger-bg/90 text-danger-soft' : 'bg-warm text-night-bg'
             }`}
             onClick={onConfirm}
           >

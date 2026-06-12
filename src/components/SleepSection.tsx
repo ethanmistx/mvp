@@ -48,7 +48,7 @@ export function SleepSection() {
       <button
         className={`btn-big w-full py-6 text-lg ${
           ongoing
-            ? 'bg-indigo-950/90 text-indigo-100 ring-1 ring-indigo-400/60 animate-breathe'
+            ? 'bg-sleep-bg text-sleep-text ring-1 ring-sleep-ring/60 animate-breathe'
             : 'bg-night-line'
         }`}
         onClick={() => void toggle()}
@@ -57,7 +57,7 @@ export function SleepSection() {
           <span>
             😴 睡眠中{' '}
             <span className="tabular-nums font-semibold">{formatHms(ongoing.start, now)}</span>
-            <span className="block text-sm mt-1 font-normal text-indigo-300/90">
+            <span className="block text-sm mt-1 font-normal text-sleep-sub">
               {formatTime(ongoing.start)} 入睡 · 点按结束
             </span>
           </span>

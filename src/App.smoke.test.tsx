@@ -99,5 +99,11 @@ describe('App 冒烟', () => {
     // 未填 Key 时「生成解读」禁用
     const genBtn = screen.getByText('生成解读') as HTMLButtonElement
     expect(genBtn.closest('button')!.disabled).toBe(true)
+
+    // 外观切换:浅色 → html.light;切回深色复原
+    fireEvent.click(screen.getByText('浅色'))
+    expect(document.documentElement.classList.contains('light')).toBe(true)
+    fireEvent.click(screen.getByText('深色'))
+    expect(document.documentElement.classList.contains('light')).toBe(false)
   })
 })
